@@ -143,15 +143,29 @@ namespace zvm
 
 	public struct WordAddress
 	{
-		public readonly ushort Address;
+		public const int WordSize = 2;
 
-		public WordAddress(ushort address)
+		public readonly int Address;
+
+		public WordAddress(int address)
 		{
 			Address = address;
 		}
 
-		public ByteAddress HighAddress => new ByteAddress(Address * 2) + 1;
-		public ByteAddress LowAddress => new ByteAddress(Address*2);
+		public ByteAddress HighAddress => new ByteAddress(Address);
+		public ByteAddress LowAddress => new ByteAddress(Address + 1);
+
+		public static WordAddress operator +(WordAddress address, int offset)
+		{
+			return new WordAddress(address.Address + (offset * WordSize));
+		}
+
+		public static WordAddress operator -(WordAddress address, int offset)
+		{
+			return new WordAddress(address.Address - (offset * WordSize));
+		}
+
+		public override string ToString() => $"0x{Address:x4}";
 	}
 
 	public struct ByteAddress
@@ -172,7 +186,7 @@ namespace zvm
 		{
 			return new ByteAddress(address.Address - offset);
 		}
+
+		public override string ToString() => $"0x{Address:x4}";
 	}
-
-
 }
