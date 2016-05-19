@@ -19,9 +19,60 @@ namespace zvm
 			var dynamicMemory = storyData.Slice(0, sizeOfDynamic);
 			var staticMemory = storyData.Slice(sizeOfDynamic, storyData.Length - sizeOfDynamic);
 			var story = new Story(dynamicMemory, staticMemory);
-
 			Console.WriteLine($"() Loaded story data of {storyData.Length} bytes which has {dynamicMemory.Length} dynamic memory and {staticMemory.Length} of read-only.");
+
+			var abbreviationTableOffset = new WordAddress(24);
+			var tableBase = story.ReadWord(abbreviationTableOffset);
+			var abbreviationTableBase = new AbbreviationTableBase(tableBase);
+			Console.WriteLine($"() Found abbreviation table at 0x{tableBase:x4}");
+
+			var first = abbreviationTableBase.First();
+			var compressedPointer = story.ReadWord(first);
+			var zstring = (ZStringAddress )new WordZStringAddress(compressedPointer);
+			Console.WriteLine($"() First string at {zstring}");
 		}
+	}
+
+	public struct WordZStringAddress
+	{
+		private readonly int _compressedPointer;
+
+		public WordZStringAddress(int compressedPointer)
+		{
+			_compressedPointer = compressedPointer;
+		}
+
+		public static explicit operator ZStringAddress(WordZStringAddress value)
+		{
+			var wordAddress = new WordAddress(value._compressedPointer * 2);
+			return new ZStringAddress(wordAddress);
+		}
+	}
+
+	public struct ZStringAddress
+	{
+		private readonly WordAddress _address;
+
+		public ZStringAddress(WordAddress address)
+		{
+			_address = address;
+		}
+
+		public override string ToString() => _address.ToString();
+	}
+
+	public struct AbbreviationNumber { }
+
+	public struct AbbreviationTableBase
+	{
+		private readonly int _tableBase;
+
+		public AbbreviationTableBase(int tableBase)
+		{
+			_tableBase = tableBase;
+		}
+
+		public WordAddress First() => new WordAddress(_tableBase);
 	}
 
 	public class Story
@@ -54,21 +105,15 @@ namespace zvm
 			return high*256 + low;
 		}
 
-		public Story WriteByte(ByteAddress address, byte value)
+		public Story Write(ByteAddress address, byte value)
 		{
 			var dynamic = _dynamicMemory.Write(address, value);
 			return new Story(dynamic, _staticMemory);
 		}
 
-		public Story WriteWord(WordAddress address, int value)
+		public Story Write(WordAddress address, int value)
 		{
-			var high = (value >> 8) & 0xff;
-			var low = (value & 0xff);
-
-			var dynamic = _dynamicMemory
-				.Write(address.HighAddress, high)
-				.Write(address.LowAddress, low);
-
+			var dynamic = _dynamicMemory.Write(address, value);
 			return new Story(dynamic, _staticMemory);
 		}
 	}
@@ -97,7 +142,7 @@ namespace zvm
 			get
 			{
 				if (!IsInRange(address))
-					throw new InvalidOperationException($"Unable to access memory above {address}");
+					throw new InvalidOperationException($"Unable to access memory above 0x{Length:x4} (Requested {address})");
 
 				byte value;
 				if (_edits.TryGetValue(address, out value))
@@ -108,12 +153,38 @@ namespace zvm
 			}
 		}
 
+		public int this[WordAddress wordAddress]
+		{
+			get
+			{
+				var high = this[wordAddress.HighAddress];
+				var low = this[wordAddress.LowAddress];
+
+				return high*256 + low;
+			}
+		}
+
 		public Memory Write(ByteAddress address, int value)
 		{
 			if (!IsInRange(address))
 				throw new InvalidOperationException($"Unable to access memory above {address}");
 
 			var updated = _edits.SetItem(address, checked((byte )value));
+			return new Memory(_original, updated);
+		}
+
+		public Memory Write(WordAddress address, int value)
+		{
+			if (!IsInRange(address.HighAddress))
+				throw new InvalidOperationException($"Unable to access memory above {address}");
+
+			var high = (value >> 8) & 0xff;
+			var low = (value & 0xff);
+
+			var updated = _edits
+				.SetItem(address.HighAddress, checked((byte) high))
+				.SetItem(address.LowAddress, checked((byte) low));
+
 			return new Memory(_original, updated);
 		}
 
@@ -128,12 +199,6 @@ namespace zvm
 			return new Memory(slice, ImmutableDictionary<ByteAddress, byte>.Empty);
 		}
 	}
-
-	public class DynamicMemory { }
-
-	public class StaticMemory { }
-
-	public class HighMemory { }
 
 	public struct PackedAddress
 	{
