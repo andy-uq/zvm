@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
+using System.Linq;
+using System.Text;
 
 namespace zvm
 {
@@ -21,15 +23,239 @@ namespace zvm
 			var story = new Story(dynamicMemory, staticMemory);
 			Console.WriteLine($"() Loaded story data of {storyData.Length} bytes which has {dynamicMemory.Length} dynamic memory and {staticMemory.Length} of read-only.");
 
-			var abbreviationTableOffset = new WordAddress(24);
-			var tableBase = story.ReadWord(abbreviationTableOffset);
-			var abbreviationTableBase = new AbbreviationTableBase(tableBase);
-			Console.WriteLine($"() Found abbreviation table at 0x{tableBase:x4}");
+			
+			var zstring = new ZStringAddress(new WordAddress(0xb106));
+			DumpZString(zstring, story);
+		}
 
-			var first = abbreviationTableBase.First();
-			var compressedPointer = story.ReadWord(first);
-			var zstring = (ZStringAddress )new WordZStringAddress(compressedPointer);
-			Console.WriteLine($"() First string at {zstring}");
+		private static void DumpZString(ZStringAddress zstring, Story story)
+		{
+			var decoder = new ZStringDecoder(story);
+			Console.WriteLine(decoder.Decode(zstring));
+		}
+	}
+
+	public class ZStringDecoder
+	{
+		private readonly Story _story;
+		private readonly StringBuilder _string;
+
+		public ZStringDecoder(Story story, StringBuilder inprogress = null)
+		{
+			_story = story;
+			_string = inprogress ?? new StringBuilder();
+		}
+
+		public string Decode(ZStringAddress zstring)
+		{
+			IDecoderState state = new LowercaseCharacter(this);
+			CharacterCodes(zstring)
+				.Aggregate(state, (current, zchar) => current.MoveNext(zchar));
+
+			return _string.ToString();
+		}
+
+		private IEnumerable<int> CharacterCodes(ZStringAddress zstring)
+		{
+			var current = zstring.Address;
+
+			bool hasMore = true;
+			while (hasMore)
+			{
+				var word = new BitPattern(_story.ReadWord(current));
+
+				yield return word.Extract(BitNumber.Bit14, BitSize.FiveBits);
+				yield return word.Extract(BitNumber.Bit9, BitSize.FiveBits);
+				yield return word.Extract(BitNumber.Bit4, BitSize.FiveBits);
+
+				hasMore = word.Extract(BitNumber.Bit15, BitSize.OneBit) == 0;
+				current += 1;
+			}
+		}
+
+		private interface IDecoderState
+		{
+			IDecoderState MoveNext(int zchar);
+		}
+
+		private class LowercaseCharacter : IDecoderState
+		{
+			private readonly ZStringDecoder _parent;
+
+			public LowercaseCharacter(ZStringDecoder parent)
+			{
+				_parent = parent;
+			}
+
+			public IDecoderState MoveNext(int zchar)
+			{
+				switch (zchar)
+				{
+					case 1:
+					case 2:
+					case 3:
+						return new Abbreviation(_parent, zchar);
+
+					case 4:
+						return new UppercaseCharacter(_parent);
+
+					case 5:
+						return new PunctuationCharacter(_parent);
+
+					default:
+						_parent._string.Append(Alphabet.Lowercase[zchar]);
+						return this;
+				}
+			}
+		}
+
+		private class Abbreviation : IDecoderState
+		{
+			private readonly ZStringDecoder _parent;
+			private readonly int _abbreviationSet;
+
+			public Abbreviation(ZStringDecoder parent, int abbreviationSet)
+			{
+				_parent = parent;
+				_abbreviationSet = abbreviationSet;
+			}
+
+			public IDecoderState MoveNext(int zchar)
+			{
+				int number = 32*(_abbreviationSet - 1) + zchar;
+				var zstring = (ZStringAddress) _parent._story.Abbreviation(new AbbreviationNumber(number));
+
+				var decoder = new ZStringDecoder(_parent._story, _parent._string);
+				decoder.Decode(zstring);
+
+				return new LowercaseCharacter(_parent);
+			}
+		}
+
+		private class PunctuationCharacter : IDecoderState
+		{
+			private readonly ZStringDecoder _parent;
+
+			public PunctuationCharacter(ZStringDecoder parent)
+			{
+				_parent = parent;
+			}
+
+			public IDecoderState MoveNext(int zchar)
+			{
+				switch (zchar)
+				{
+					case 1:
+					case 2:
+					case 3:
+						return new Abbreviation(_parent, zchar);
+
+					case 4:
+						return new UppercaseCharacter(_parent);
+
+					case 5:
+						return new PunctuationCharacter(_parent);
+
+					case 6:
+						// return new AsciiCharacter(_parent);
+						throw new NotImplementedException();
+
+					default:
+						_parent._string.Append(Alphabet.Punctuation[zchar]);
+						return new LowercaseCharacter(_parent);
+				}
+			}
+		}
+
+		private class UppercaseCharacter : IDecoderState
+		{
+			private readonly ZStringDecoder _parent;
+
+			public UppercaseCharacter(ZStringDecoder parent)
+			{
+				_parent = parent;
+			}
+
+			public IDecoderState MoveNext(int zchar)
+			{
+				switch (zchar)
+				{
+					case 1:
+					case 2:
+					case 3:
+						return new Abbreviation(_parent, zchar);
+
+					case 4:
+						return new UppercaseCharacter(_parent);
+
+					case 5:
+						return new PunctuationCharacter(_parent);
+
+					default:
+						_parent._string.Append(Alphabet.Uppercase[zchar]);
+						return new LowercaseCharacter(_parent);
+				}
+			}
+		}
+	}
+
+	public struct Alphabet
+	{
+		public static readonly Alphabet Lowercase = new Alphabet(" ", "?", "?", "?", "?", "?", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z");
+		public static readonly Alphabet Uppercase = new Alphabet(" ", "?", "?", "?", "?", "?", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z");
+		public static readonly Alphabet Punctuation = new Alphabet(" ", "?", "?", "?", "?", "?", "?", "\n", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", ".", ",", "!", "?", "_", "#", "'", "\"", "/", "\\", "-", ":", "(", ")");
+
+		private ImmutableArray<string> _characters;
+		private Alphabet(params string[] characters) : this()
+		{
+			_characters = characters.ToImmutableArray();
+		}
+
+		public string this[int index] => _characters[index];
+	}
+
+	public enum BitNumber
+	{
+		Bit0 = 0,
+		Bit1,
+		Bit2,
+		Bit3,
+		Bit4,
+		Bit5,
+		Bit6,
+		Bit7,
+		Bit8,
+		Bit9,
+		Bit10,
+		Bit11,
+		Bit12,
+		Bit13,
+		Bit14,
+		Bit15,
+	}
+
+	public enum BitSize
+	{
+		OneBit = 1,
+		TwoBits,
+		ThreeBits,
+		FourBits,
+		FiveBits,
+	}
+
+	public struct BitPattern
+	{
+		private readonly int _word;
+
+		public BitPattern(int value)
+		{
+			_word = value;
+		}
+
+		public int Extract(BitNumber high, BitSize length)
+		{
+			var mask = ~(-1 << (int )length);
+			return (_word >> ((int) high - (int) length + 1)) & mask;
 		}
 	}
 
@@ -51,39 +277,63 @@ namespace zvm
 
 	public struct ZStringAddress
 	{
-		private readonly WordAddress _address;
+		public readonly WordAddress Address;
 
 		public ZStringAddress(WordAddress address)
 		{
-			_address = address;
+			Address = address;
 		}
 
-		public override string ToString() => _address.ToString();
+		public override string ToString() => Address.ToString();
 	}
 
-	public struct AbbreviationNumber { }
+	public struct AbbreviationNumber
+	{
+		private const int MaxAbbreviations = 32 * 3;
+		public readonly int Number;
+
+		public AbbreviationNumber(int number)
+		{
+			if (number >= MaxAbbreviations)
+				throw new ArgumentOutOfRangeException(nameof(number), $"Invalid abbreviation: {number}.  Must be less than {MaxAbbreviations}"); 
+
+			Number = number;
+		}
+	}
 
 	public struct AbbreviationTableBase
 	{
-		private readonly int _tableBase;
+		private readonly WordAddress _tableBase;
 
 		public AbbreviationTableBase(int tableBase)
 		{
-			_tableBase = tableBase;
+			_tableBase = new WordAddress(tableBase);
 		}
 
-		public WordAddress First() => new WordAddress(_tableBase);
+		public WordAddress First() => _tableBase;
+		public WordAddress this[AbbreviationNumber index] => _tableBase + index.Number;
 	}
 
 	public class Story
 	{
 		private readonly Memory _dynamicMemory;
 		private readonly Memory _staticMemory;
+		private AbbreviationTableBase _abbreviationTableBase;
 
 		public Story(Memory dynamicMemory, Memory staticMemory)
 		{
 			_dynamicMemory = dynamicMemory;
 			_staticMemory = staticMemory;
+
+			var tableBase = ReadWord(new WordAddress(24));
+			_abbreviationTableBase = new AbbreviationTableBase(tableBase);
+		}
+
+		public WordZStringAddress Abbreviation(AbbreviationNumber number)
+		{
+			var address = _abbreviationTableBase[number];
+			var compressedPointer = ReadWord(address);
+			return new WordZStringAddress(compressedPointer);
 		}
 
 		public int ReadByte(ByteAddress address)
