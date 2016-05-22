@@ -3,7 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
 VisualStudioVersion = 14.0.25123.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "zvm", "zvm.xproj", "{4C9FED3F-F279-4A2E-9320-6D1956478FDD}"
+Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "zvm", "src\zvm\zvm.xproj", "{4C9FED3F-F279-4A2E-9320-6D1956478FDD}"
+EndProject
+Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "zvm.tests", "test\zvm.tests\zvm.tests.xproj", "{AC72D769-2086-41E6-A995-AFAB523EB300}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +17,10 @@ Global
 		{4C9FED3F-F279-4A2E-9320-6D1956478FDD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4C9FED3F-F279-4A2E-9320-6D1956478FDD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4C9FED3F-F279-4A2E-9320-6D1956478FDD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AC72D769-2086-41E6-A995-AFAB523EB300}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AC72D769-2086-41E6-A995-AFAB523EB300}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AC72D769-2086-41E6-A995-AFAB523EB300}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AC72D769-2086-41E6-A995-AFAB523EB300}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

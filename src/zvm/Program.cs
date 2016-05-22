@@ -257,6 +257,11 @@ namespace zvm
 			var mask = ~(-1 << (int )length);
 			return (_word >> ((int) high - (int) length + 1)) & mask;
 		}
+
+		public int Extract(BitNumber bitNumber)
+		{
+			return Extract(bitNumber, BitSize.OneBit);
+		}
 	}
 
 	public struct WordZStringAddress
