@@ -128,8 +128,7 @@ namespace zvm.Types.ZStrings
 						return new PunctuationCharacter(_parent);
 
 					case 6:
-						// return new AsciiCharacter(_parent);
-						throw new NotImplementedException();
+						return new AsciiCharacter(_parent);
 
 					default:
 						_parent._string.Append(Alphabet.Punctuation[zchar]);
@@ -166,6 +165,30 @@ namespace zvm.Types.ZStrings
 						_parent._string.Append(Alphabet.Uppercase[zchar]);
 						return new LowercaseCharacter(_parent);
 				}
+			}
+		}
+
+		private class AsciiCharacter : IDecoderState
+		{
+			private readonly ZStringDecoder _parent;
+			private int _zchar;
+
+			public AsciiCharacter(ZStringDecoder parent)
+			{
+				_parent = parent;
+				_zchar = -1;
+			}
+
+			public IDecoderState MoveNext(int zchar)
+			{
+				if (_zchar == -1)
+				{
+					_zchar = zchar << 5;
+					return this;
+				}
+
+				_parent._string.Append((char) ((_zchar | zchar) & 0xff));
+				return new LowercaseCharacter(_parent);
 			}
 		}
 	}

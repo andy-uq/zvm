@@ -2,16 +2,15 @@ using zvm.Types.Addressing;
 
 namespace zvm.Types.ZStrings.Abbreviations
 {
-	public struct AbbreviationTableBase
+	public struct AbbreviationTable
 	{
 		private readonly WordAddress _tableBase;
 
-		public AbbreviationTableBase(int tableBase)
+		public AbbreviationTable(int tableBase)
 		{
 			_tableBase = new WordAddress(tableBase);
 		}
 
-		public WordAddress First() => _tableBase;
 		public WordAddress this[AbbreviationNumber index] => _tableBase + index.Number;
 	}
 }

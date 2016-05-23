@@ -18,6 +18,11 @@ namespace zvm.Types.Addressing
 			_address = address;
 		}
 
+		public WordAddress(ByteAddress byteAddress)
+		{
+			_address = byteAddress.Address;
+		}
+
 		public ByteAddress HighAddress => new ByteAddress(_address);
 		public ByteAddress LowAddress => new ByteAddress(_address + 1);
 

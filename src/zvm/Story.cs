@@ -1,4 +1,5 @@
 ﻿using zvm.Types.Addressing;
+using zvm.Types.Dictionary;
 using zvm.Types.ZStrings;
 using zvm.Types.ZStrings.Abbreviations;
 
@@ -8,22 +9,33 @@ namespace zvm
 	{
 		private readonly Memory _dynamicMemory;
 		private readonly Memory _staticMemory;
-		private AbbreviationTableBase _abbreviationTableBase;
+		private AbbreviationTable _abbreviationTable;
 
 		public Story(Memory dynamicMemory, Memory staticMemory)
 		{
 			_dynamicMemory = dynamicMemory;
 			_staticMemory = staticMemory;
 
-			var tableBase = ReadWord(new WordAddress(24));
-			_abbreviationTableBase = new AbbreviationTableBase(tableBase);
+			var abbreviationTableOffset = ReadWord(new WordAddress(24));
+			_abbreviationTable = new AbbreviationTable(abbreviationTableOffset);
+
+			var dictionaryTableOffset = ReadWord(new WordAddress(8));
+			Dictionary = new DictionaryTable(this, dictionaryTableOffset);
 		}
+
+		public DictionaryTable Dictionary { get; }
 
 		public WordZStringAddress Abbreviation(AbbreviationNumber number)
 		{
-			var address = _abbreviationTableBase[number];
+			var address = _abbreviationTable[number];
 			var compressedPointer = ReadWord(address);
 			return new WordZStringAddress(compressedPointer);
+		}
+
+		public string ReadString(ZStringAddress zstring)
+		{
+			var decoder = new ZStringDecoder(this);
+			return decoder.Decode(zstring);
 		}
 
 		public int ReadByte(ByteAddress address)
