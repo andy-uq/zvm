@@ -1,6 +1,7 @@
 using System.Linq;
 using Shouldly;
 using Xunit;
+using zvm.Types;
 
 namespace zvm.tests
 {
@@ -21,18 +22,18 @@ namespace zvm.tests
 		[InlineData("0111 0000", BitNumber.Bit7, 0)]
 		[InlineData("0111 0000", BitNumber.Bit6, 1)]
 		[InlineData("0111 0000", BitNumber.Bit5, 1)]
-		public void FetchBit(string source, BitNumber bitNumber, int expected)
+		public void GetBit(string source, BitNumber bitNumber, int expected)
 		{
-			MakeBitPattern(source).Extract(bitNumber).ShouldBe(expected);
+			MakeBitPattern(source).GetBit(bitNumber).ShouldBe(expected);
 		}
 
 		[Theory]
 		[InlineData("0000 0000", BitNumber.Bit5, BitSize.FiveBits, "")]
 		[InlineData("1111 1111", BitNumber.Bit5, BitSize.FiveBits, "1 1111")]
 		[InlineData("0111 0000", BitNumber.Bit7, BitSize.ThreeBits, "011")]
-		public void FetchBits(string source, BitNumber bitNumber, BitSize bitSize, string expected)
+		public void GetBits(string source, BitNumber bitNumber, BitSize bitSize, string expected)
 		{
-			MakeBitPattern(source).Extract(bitNumber, bitSize).ShouldBe(FromBitString(expected));
+			MakeBitPattern(source).GetBits(bitNumber, bitSize).ShouldBe(FromBitString(expected));
 		}
 
 		private static BitPattern MakeBitPattern(string bits)
