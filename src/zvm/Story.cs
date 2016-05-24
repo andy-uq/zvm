@@ -2,6 +2,7 @@
 using System.Linq;
 using zvm.Types.Addressing;
 using zvm.Types.Dictionary;
+using zvm.Types.Objects;
 using zvm.Types.ZStrings;
 using zvm.Types.ZStrings.Abbreviations;
 
@@ -16,13 +17,15 @@ namespace zvm
 	{
 		private readonly Memory _dynamicMemory;
 		private readonly Memory _staticMemory;
-		private AbbreviationTable _abbreviationTable;
+
+		private readonly AbbreviationTable _abbreviationTable;
 
 		public static class StoryHeaderOffsets
 		{
 			public static readonly ByteAddress StoryVersion = new ByteAddress(0);
 			public static readonly WordAddress AbbreviationTableBase = new WordAddress(24);
 			public static readonly WordAddress DictionaryTableBase = new WordAddress(8);
+			public static readonly WordAddress ObjectTableOffset = new WordAddress(10);
 		}
 
 		public Story(Memory dynamicMemory, Memory staticMemory)
@@ -34,10 +37,13 @@ namespace zvm
 			Version = header.Version;
 			_abbreviationTable = new AbbreviationTable(header.AbbreviationTableOffset);
 			Dictionary = new DictionaryTable(this, header.DictionaryTableOffset);
+			ObjectTable = new ObjectTable(this, header.ObjectTableOffset);
 		}
 
 		public DictionaryTable Dictionary { get; }
 		public StoryVersion Version { get; }
+		public bool IsV3 => Version <= StoryVersion.V3;
+		public ObjectTable ObjectTable { get; }
 
 		public WordZStringAddress Abbreviation(AbbreviationNumber number)
 		{
@@ -87,8 +93,9 @@ namespace zvm
 		{
 			public StoryHeader(Story story)
 			{
-				StoryVersion[] validVersions = (StoryVersion[])Enum.GetValues(typeof(StoryVersion));
 				Version = (StoryVersion)story.ReadByte(StoryHeaderOffsets.StoryVersion);
+
+				var validVersions = (StoryVersion[])Enum.GetValues(typeof(StoryVersion));
 				if (validVersions.All(v => v != Version))
 				{
 					throw new InvalidStoryVersionException($"Invalid story version {Version}");
@@ -96,11 +103,13 @@ namespace zvm
 
 				AbbreviationTableOffset = new AbbreviationTableOffset(story.ReadWord(StoryHeaderOffsets.AbbreviationTableBase));
 				DictionaryTableOffset = new DictionaryTableOffset(story.ReadWord(StoryHeaderOffsets.DictionaryTableBase));
+				ObjectTableOffset = new ObjectTableOffset(story.ReadWord(StoryHeaderOffsets.ObjectTableOffset));
 			}
 
 			public StoryVersion Version { get; }
 			public DictionaryTableOffset DictionaryTableOffset { get; }
 			public AbbreviationTableOffset AbbreviationTableOffset { get; }
+			public ObjectTableOffset ObjectTableOffset { get; }
 		}
 	}
 

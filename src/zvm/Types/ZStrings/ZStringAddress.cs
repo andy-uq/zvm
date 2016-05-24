@@ -11,6 +11,11 @@ namespace zvm.Types.ZStrings
 			Address = address;
 		}
 
+		public ZStringAddress(ByteAddress address)
+		{
+			Address = new WordAddress(address);
+		}
+
 		public override string ToString() => Address.ToString();
 	}
 }
