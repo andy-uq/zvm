@@ -19,6 +19,16 @@ namespace zvm.Types.Dictionary
 		public DictionaryAddress this[DictionaryNumber index] => new DictionaryAddress(Address, EntrySize, index);
 	}
 
+	public struct DictionaryTableOffset
+	{
+		public readonly ByteAddress Address;
+
+		public DictionaryTableOffset(int tableOffset)
+		{
+			Address = new ByteAddress(tableOffset);
+		}
+	}
+
 	public class DictionaryTable
 	{
 		private readonly ByteAddress _wordSeparators;
@@ -27,9 +37,9 @@ namespace zvm.Types.Dictionary
 		private readonly DictionaryBase _entryBase;
 		private readonly int _entryCount;
 
-		public DictionaryTable(Story story, int tableBase)
+		public DictionaryTable(Story story, DictionaryTableOffset tableOffset)
 		{
-			_wordSeparators = new ByteAddress(tableBase);
+			_wordSeparators = tableOffset.Address;
 			_wordSeparatorsCount = story.ReadByte(_wordSeparators);
 
 			ByteAddress dictionaryBase = _wordSeparators + _wordSeparatorsCount + 1;
