@@ -1,10 +1,17 @@
-﻿using zvm.Types.Addressing;
+﻿using System;
+using System.Linq;
+using zvm.Types.Addressing;
 using zvm.Types.Dictionary;
 using zvm.Types.ZStrings;
 using zvm.Types.ZStrings.Abbreviations;
 
 namespace zvm
 {
+	public enum StoryVersion : byte
+	{
+		V3 = 3
+	}
+
 	public class Story
 	{
 		private readonly Memory _dynamicMemory;
@@ -16,6 +23,13 @@ namespace zvm
 			_dynamicMemory = dynamicMemory;
 			_staticMemory = staticMemory;
 
+			StoryVersion[] validVersions = (StoryVersion[]) Enum.GetValues(typeof(StoryVersion));
+			Version = (StoryVersion) ReadByte(new ByteAddress(0));
+			if (validVersions.All(v => v != Version))
+			{
+				throw new InvalidStoryVersionException($"Invalid story version {Version}");
+			}
+
 			var abbreviationTableOffset = ReadWord(new WordAddress(24));
 			_abbreviationTable = new AbbreviationTable(abbreviationTableOffset);
 
@@ -24,6 +38,7 @@ namespace zvm
 		}
 
 		public DictionaryTable Dictionary { get; }
+		public StoryVersion Version { get; }
 
 		public WordZStringAddress Abbreviation(AbbreviationNumber number)
 		{
@@ -67,6 +82,13 @@ namespace zvm
 		{
 			var dynamic = _dynamicMemory.Write(address, value);
 			return new Story(dynamic, _staticMemory);
+		}
+	}
+
+	public class InvalidStoryVersionException : InvalidOperationException
+	{
+		public InvalidStoryVersionException(string message) : base(message)
+		{
 		}
 	}
 }
