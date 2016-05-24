@@ -17,6 +17,11 @@ namespace zvm.Types.Addressing
 			Address = checked ((ushort) address);
 		}
 
+		public static explicit operator int(ByteAddress address)
+		{
+			return address.Address;
+		}
+
 		public static ByteAddress operator +(ByteAddress address, int offset)
 		{
 			return new ByteAddress(address.Address + offset);
