@@ -10,7 +10,21 @@ namespace zvm
 {
 	public enum StoryVersion : byte
 	{
-		V3 = 3
+		V1 = 1,
+		V2,
+		V3,
+		V4,
+		V5,
+		V6,
+		V7
+	}
+
+	public static class StoryVersionMethods
+	{
+		public static bool IsV3OrLower(this StoryVersion version) => version <= StoryVersion.V3;
+		public static bool IsV4OrLower(this StoryVersion version) => version <= StoryVersion.V4;
+		public static bool IsV4OrHigher(this StoryVersion version) => version >= StoryVersion.V4;
+		public static bool IsV5OrHigher(this StoryVersion version) => version >= StoryVersion.V5;
 	}
 
 	public class Story
@@ -42,7 +56,6 @@ namespace zvm
 
 		public DictionaryTable Dictionary { get; }
 		public StoryVersion Version { get; }
-		public bool IsV3 => Version <= StoryVersion.V3;
 		public ObjectTable ObjectTable { get; }
 
 		public WordZStringAddress Abbreviation(AbbreviationNumber number)

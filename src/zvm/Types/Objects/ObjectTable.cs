@@ -10,11 +10,11 @@ namespace zvm.Types.Objects
 
 		public ObjectTable(Story story, ObjectTableOffset tableOffset)
 		{
-			var defaultPropertyTableSize = story.IsV3 ? 31 : 63;
+			var defaultPropertyTableSize = story.Version.IsV3OrLower() ? 31 : 63;
 			var defaultPropertyEntrySize = 2;
 
 			var treeBase = tableOffset.Address + defaultPropertyEntrySize * defaultPropertyTableSize;
-			var sizeOfEntry = story.IsV3 ? 9 : 14;
+			var sizeOfEntry = story.Version.IsV3OrLower() ? 9 : 14;
 			_objectTree = new ObjectTree(story, treeBase, sizeOfEntry);
 		}
 
@@ -40,7 +40,7 @@ namespace zvm.Types.Objects
 
 		public ObjectNumber Parent(ObjectNumber number)
 		{
-			if (_story.IsV3)
+			if (_story.Version.IsV3OrLower())
 			{
 				var address = this[number];
 				var parent = _story.ReadByte(address.Address + 4);
@@ -52,7 +52,7 @@ namespace zvm.Types.Objects
 
 		public ObjectNumber Sibling(ObjectNumber number)
 		{
-			if (_story.IsV3)
+			if (_story.Version.IsV3OrLower())
 			{
 				var address = this[number];
 				var parent = _story.ReadByte(address.Address + 5);
@@ -64,7 +64,7 @@ namespace zvm.Types.Objects
 
 		public ObjectNumber Child(ObjectNumber number)
 		{
-			if (_story.IsV3)
+			if (_story.Version.IsV3OrLower())
 			{
 				var address = this[number];
 				var parent = _story.ReadByte(address.Address + 6);
@@ -76,7 +76,7 @@ namespace zvm.Types.Objects
 
 		public PropertyDataOffset PropertyData(ObjectNumber number)
 		{
-			if (_story.IsV3)
+			if (_story.Version.IsV3OrLower())
 			{
 				var address = this[number];
 				var propertyDataOffset = _story.ReadWord(new WordAddress(address.Address + 7));
