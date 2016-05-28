@@ -81,13 +81,45 @@
   let string_of_char c =
     c.ToString()
 
+  let unsigned_word word =
+    ((word % 65536) + 65536) % 65536
+
+  let signed_word word =
+    let canonical = unsigned_word word
+    if canonical > 32767 then canonical - 65536 else canonical
+
   let accumulate_strings_loop to_string start max =
     let rec aux acc i =
       if i >= max then acc
-      else aux (acc + (to_string i)) (i + 1) in
+      else aux (acc + (to_string i)) (i + 1)
     aux "" start
 
   let accumulate_strings to_string items =
     let folder text item =
-      text + (to_string item) in
+      text + (to_string item)
     List.fold folder "" items
+
+  let transitive_closure_many items relation =
+    let rec merge related set stack =
+        match related with
+        | [] -> (set, stack)
+        | head :: tail ->
+            if List.contains head set then merge tail set stack
+            else merge tail (head :: set) (head :: stack)
+    let rec aux set stack =
+      match stack with
+      | [] -> set
+      | head :: tail ->
+          let (new_set, new_stack) = merge (relation head) set tail
+          aux new_set new_stack
+    aux [] items
+
+  let transitive_closure item relation =
+    transitive_closure_many [item] relation
+
+  let reflexive_closure_many items relation =
+    let t = transitive_closure_many items relation
+    List.fold (fun s i -> if List.contains i s then s else i :: s) t items
+
+  let reflexive_closure item relation =
+    reflexive_closure_many [item] relation

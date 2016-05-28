@@ -95,6 +95,48 @@
     | EXT_10  | EXT_19  | EXT_29 -> true
     | _ -> false
 
+  let opcode instruction =
+    instruction.opcode
+  
+  let address instruction =
+    instruction.address
+
+  let length instruction =
+    instruction.length
+
+  let operands instruction =
+    instruction.operands
+
+  let store instruction =
+    instruction.store
+
+  let branch instruction =
+    instruction.branch
+
+  let text instruction =
+    instruction.text
+
+  let following instruction =
+    let (Instruction addr) = instruction.address in
+    (Instruction (addr + instruction.length))
+
+  let jump_address instruction offset =
+    let (Instruction addr) = instruction.address in
+    Instruction (addr + instruction.length + offset - 2)
+  
+  let continues_to_following opcode =
+    match opcode with
+    | OP2_28 (* throw *)
+    | OP1_139 (* ret *)
+    | OP1_140 (* jump *)
+    | OP0_176 (* rtrue *)
+    | OP0_177 (* rfalse *)
+    | OP0_179 (* print_ret *)
+    | OP0_183 (* restart *)
+    | OP0_184 (* ret_popped *)
+    | OP0_186 (* quit *) -> false
+    | _ -> true
+
   let has_text opcode =
     match opcode with
     | OP0_178 | OP0_179 -> true
@@ -108,6 +150,19 @@
     | OP1_128 | OP1_129 | OP1_130 | OP0_189 | OP0_191
     | VAR_247 | VAR_255
     | EXT_6   | EXT_14 | EXT_24  | EXT_27 -> true
+    | _ -> false
+
+  let is_call ver opcode =
+    match opcode with
+    | OP1_143 (* call_1n in v5, logical not in v1-4 *)
+      -> Story.v5_or_higher ver
+    | VAR_224 (* call / call_vs *)
+    | OP1_136 (* call_1s *)
+    | OP2_26  (* call_2n *)
+    | OP2_25  (* call_2s *)
+    | VAR_249 (* call_vn *)
+    | VAR_250 (* call_vn2 *)
+    | VAR_236 (* call_vs2 *) -> true
     | _ -> false
 
   let opcode_name opcode ver =
