@@ -40,11 +40,11 @@
   let dec_byte_addr_by address offset =
     inc_byte_addr_by address (0 - offset)
 
-  let dereference_string address bytes =
-    if is_out_of_range address (String.length bytes) then
+  let dereference_array address (bytes : byte[]) =
+    if is_out_of_range address (Array.length bytes) then
       failwith "address out of range"
     else
-      let (Byte_address addr) = address in
+      let (Byte_address addr) = address
       int bytes.[addr]
 
   let address_of_high_byte (Word_address address) =
@@ -52,3 +52,6 @@
   
   let address_of_low_byte (Word_address address) = 
     Byte_address (address + 1)
+
+  let get_file filename =
+    System.IO.File.ReadAllBytes filename

@@ -2,13 +2,13 @@
   open Types
   open Utility
 
-  type t =  { original_bytes : string; edits : IntMap<char> }
+  type t =  { original_bytes : byte[]; edits : IntMap<byte> }
 
   let make bytes =
     { original_bytes = bytes; edits = Map.empty }
 
   let size bytes =
-    String.length bytes.original_bytes
+    Array.length bytes.original_bytes
 
   let read_byte bytes address =
     if is_out_of_range address (size bytes) then
@@ -26,5 +26,5 @@
       failwith "address is out of range"
     else
       let (Byte_address addr) = address in
-      let b = char value in
+      let b = byte value in
       { bytes with edits = Map.add addr b bytes.edits }
