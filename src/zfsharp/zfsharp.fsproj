@@ -50,6 +50,7 @@
     <Compile Include="AssemblyInfo.fs" />
     <Compile Include="Types.fs" />
     <Compile Include="Utility.fs" />
+    <Compile Include="ImmutableBytes.fs" />
     <Compile Include="Program.fs" />
     <None Include="App.config" />
   </ItemGroup>
