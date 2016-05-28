@@ -78,3 +78,8 @@
       if i >= max then acc
       else aux (acc + (to_string i)) (i + 1) in
     aux "" start
+
+  let accumulate_strings to_string items =
+    let folder text item =
+      text + (to_string item) in
+    List.fold folder "" items

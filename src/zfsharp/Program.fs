@@ -7,15 +7,6 @@ open Utility
 [<EntryPoint>]
 let main argv = 
   let story = Story.load @"minizork.z3"
-  let version_address = Byte_address 0 in
-  let story = Story.load "minizork.z3" in
-  let version = Story.read_byte story version_address in
-  Printf.printf "%d\n" version
-
-  let zstring = Zstring 0xb106 in
-    let text = Zstring.read story zstring in
-    Printf.printf "%s\n" text;
-
-  let dict = Dictionary.display story in
-    Printf.printf "%s\n" dict
+  let tree = Object.display_object_tree story in
+    Printf.printf "%s\n" tree
   0 // return an integer exit code
