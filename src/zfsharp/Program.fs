@@ -15,4 +15,7 @@ let main argv =
   let zstring = Zstring 0xb106 in
     let text = Zstring.read story zstring in
     Printf.printf "%s\n" text;
+
+  let dict = Dictionary.display story in
+    Printf.printf "%s\n" dict
   0 // return an integer exit code

@@ -20,8 +20,8 @@
       dereference_array static_addr story.static_memory 
 
   let read_word story address =
-   let high = read_byte story (address_of_high_byte address) in
-   let low = read_byte story (address_of_low_byte address) in
+   let high = read_byte story (address_of_high_byte address)
+   let low = read_byte story (address_of_low_byte address)
    256 * high + low
 
   let write_byte story address value =
@@ -37,19 +37,23 @@
   let header_size = 64
   let static_memory_base_offset = Word_address 14
 
+  let dictionary_base story =
+    let dictionary_base_offset = Word_address 8
+    Dictionary_base (read_word story dictionary_base_offset)
+
   let abbreviations_table_base story =
-    let abbreviations_table_base_offset = Word_address 24 in
+    let abbreviations_table_base_offset = Word_address 24
     Abbreviation_table_base (read_word story abbreviations_table_base_offset)
 
   let load filename =
-    let file = get_file filename in
-    let len = Array.length file in
+    let file = get_file filename
+    let len = Array.length file
     if len < header_size then
       failwith (Printf.sprintf "%s is not a valid story file" filename)
     else
       let high = dereference_array (address_of_high_byte static_memory_base_offset) file
       let low = dereference_array (address_of_low_byte static_memory_base_offset) file
-      let dynamic_length = high * 256 + low in
+      let dynamic_length = high * 256 + low
       if dynamic_length > len then
         failwith (Printf.sprintf "%s is not a valid story file because could not decode header" filename)
       else 

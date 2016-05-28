@@ -14,17 +14,17 @@
     if is_out_of_range address (size bytes) then
       failwith "address is out of range"
     else
-      let (Byte_address addr) = address in
+      let (Byte_address addr) = address
       let c =
         match (Map.tryFind addr bytes.edits) with
         | None -> bytes.original_bytes.[addr]
-        | Some a -> a in
+        | Some a -> a
       int c
 
   let write_byte bytes address value =
     if is_out_of_range address (size bytes) then
       failwith "address is out of range"
     else
-      let (Byte_address addr) = address in
-      let b = byte value in
+      let (Byte_address addr) = address
+      let b = byte value
       { bytes with edits = Map.add addr b bytes.edits }

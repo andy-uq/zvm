@@ -40,9 +40,9 @@
     if n < 0 || n >= abbreviation_table_length then
       failwith "bad offset into abbreviation table"
     else
-      let _base = first_abbrev_addr (Story.abbreviations_table_base story) in
-      let abbr_addr = inc_word_addr_by _base n in
-      let word_addr = Word_zstring (Story.read_word story abbr_addr) in
+      let _base = first_abbrev_addr (Story.abbreviations_table_base story)
+      let abbr_addr = inc_word_addr_by _base n
+      let word_addr = Word_zstring (Story.read_word story abbr_addr)
       decode_word_address word_addr
 
   let rec read story (Zstring address) =
@@ -69,28 +69,27 @@
       | (6, Alphabet 2)  -> ("", Leading)
       | (_, Alphabet a) -> (alphabet_table.[a].[zchar], alphabet0)
       | (_, Abbrev (Abbreviation a)) ->
-        let abbrv = Abbreviation (a + zchar) in
-        let addr = abbreviation_zstring story abbrv in
-        let str = read story addr in
+        let abbrv = Abbreviation (a + zchar)
+        let addr = abbreviation_zstring story abbrv
+        let str = read story addr
         (str, alphabet0)
       | (_, Leading) -> ("", (Trailing zchar))
       | (_, Trailing high) ->
-        let s = string_of_char (char (high * 32 + zchar)) in
-        (s, alphabet0) in
-
+        let s = string_of_char (char (high * 32 + zchar))
+        (s, alphabet0)
     let rec aux acc state1 current_address =
-      let zchar_bit_size = size5 in
-      let word = Story.read_word story current_address in
-      let is_end = fetch_bit bit15 word in
-      let zchar1 = Zchar (fetch_bits bit14 zchar_bit_size word) in
-      let zchar2 = Zchar (fetch_bits bit9 zchar_bit_size word) in
-      let zchar3 = Zchar (fetch_bits bit4 zchar_bit_size word) in
-      let (text1, state2) = process_zchar zchar1 state1 in
-      let (text2, state3) = process_zchar zchar2 state2 in
-      let (text3, state_next) = process_zchar zchar3 state3 in
-      let new_acc = acc + text1 + text2 + text3 in
+      let zchar_bit_size = size5
+      let word = Story.read_word story current_address
+      let is_end = fetch_bit bit15 word
+      let zchar1 = Zchar (fetch_bits bit14 zchar_bit_size word)
+      let zchar2 = Zchar (fetch_bits bit9 zchar_bit_size word)
+      let zchar3 = Zchar (fetch_bits bit4 zchar_bit_size word)
+      let (text1, state2) = process_zchar zchar1 state1
+      let (text2, state3) = process_zchar zchar2 state2
+      let (text3, state_next) = process_zchar zchar3 state3
+      let new_acc = acc + text1 + text2 + text3
       if is_end then new_acc
-      else aux new_acc state_next (inc_word_addr current_address) in
+      else aux new_acc state_next (inc_word_addr current_address)
     aux "" alphabet0 (Word_address address)
 
   (* A debugging method for looking at memory broken up into the
@@ -98,13 +97,13 @@
 
   let display_bytes story (Zstring addr) =
     let rec aux current acc =
-      let word = Story.read_word story current in
-      let is_end = fetch_bits bit15 size1 word in
-      let zchar1 = fetch_bits bit14 size5 word in
-      let zchar2 = fetch_bits bit9 size5 word in
-      let zchar3 = fetch_bits bit4 size5 word in
-      let s = Printf.sprintf "%02x %02x %02x " zchar1 zchar2 zchar3 in
-      let acc = acc + s in
+      let word = Story.read_word story current
+      let is_end = fetch_bits bit15 size1 word
+      let zchar1 = fetch_bits bit14 size5 word
+      let zchar2 = fetch_bits bit9 size5 word
+      let zchar3 = fetch_bits bit4 size5 word
+      let s = Printf.sprintf "%02x %02x %02x " zchar1 zchar2 zchar3
+      let acc = acc + s
       if is_end = 1 then acc
-      else aux (inc_word_addr current) acc in
+      else aux (inc_word_addr current) acc
     aux (Word_address addr) ""
