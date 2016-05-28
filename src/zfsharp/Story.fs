@@ -48,12 +48,30 @@
     | 7 -> V7
     | 8 -> V8
     | _ -> failwith "unknown version"
+  
+  let v5_or_lower v =
+    match v with
+    | V1  | V2  | V3  | V4 | V5 -> true
+    | V6  | V7  | V8 -> false
+
+  let v6_or_higher v =
+    not (v5_or_lower v)
+
+  let v4_or_lower v =
+    match v with
+    | V1  | V2  | V3  | V4 -> true
+    | V5  | V6  | V7  | V8 -> false
+
+  let v5_or_higher v =
+    not (v4_or_lower v)
 
   let v3_or_lower v =
     match v with
     | V1  | V2  | V3 -> true
     | V4  | V5  | V6  | V7  | V8 -> false
 
+  let v4_or_higher v =
+    not (v3_or_lower v)
   let dictionary_base story =
     let dictionary_base_offset = Word_address 8
     Dictionary_base (read_word story dictionary_base_offset)

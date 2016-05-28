@@ -23,6 +23,8 @@
   let size3 = Bit_size 3
   let size4 = Bit_size 4
   let size5 = Bit_size 5
+  let size6 = Bit_size 6
+  let size7 = Bit_size 7
 
   let is_in_range (Byte_address address) size = 
     0 <= address && address < size
@@ -53,6 +55,12 @@
   
   let inc_word_addr address =
     inc_word_addr_by address 1
+
+  let word_addr_to_byte_addr (Word_address address) =
+    Byte_address address
+
+  let byte_addr_to_word_addr (Byte_address address) =
+    Word_address address
 
   let dereference_array address (bytes : byte[]) =
     if is_out_of_range address (Array.length bytes) then
