@@ -31,14 +31,25 @@
     not (is_in_range address size)
 
   let fetch_bits (Bit_number high) (Bit_size length) word =
-      let mask = ~~~(-1 <<< length)
-      (word >>> (high - length + 1)) &&& mask
+    let mask = ~~~(-1 <<< length)
+    (word >>> (high - length + 1)) &&& mask
+
+  let fetch_bit (Bit_number n) word =
+    (word &&& (1 <<< n)) >>> n = 1
 
   let inc_byte_addr_by (Byte_address address) offset =
     Byte_address (address + offset)
   
   let dec_byte_addr_by address offset =
     inc_byte_addr_by address (0 - offset)
+
+  let word_size = 2
+
+  let inc_word_addr_by (Word_address address) offset =
+    Word_address (address + offset * word_size)
+  
+  let inc_word_addr address =
+    inc_word_addr_by address 1
 
   let dereference_array address (bytes : byte[]) =
     if is_out_of_range address (Array.length bytes) then
@@ -55,3 +66,6 @@
 
   let get_file filename =
     System.IO.File.ReadAllBytes filename
+
+  let string_of_char c =
+    c.ToString()
