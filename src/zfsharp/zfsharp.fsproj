@@ -52,7 +52,8 @@
     <Compile Include="Utility.fs" />
     <Compile Include="ImmutableBytes.fs" />
     <Compile Include="Story.fs" />
-    <Compile Include="ZString.fs" />
+    <Compile Include="Zstring.fs" />
+    <Compile Include="Dictionary.fs" />
     <Compile Include="Program.fs" />
     <None Include="App.config" />
   </ItemGroup>
