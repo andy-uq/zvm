@@ -45,5 +45,5 @@
     let sorted = List.sort reachable
     let to_string addr =
       let instr = Instruction.decode story addr
-      Instruction.display instr (Story.version story) 
+      Instruction.display instr story
     accumulate_strings to_string sorted

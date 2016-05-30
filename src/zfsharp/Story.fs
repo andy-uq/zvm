@@ -81,8 +81,16 @@
     Abbreviation_table_base (read_word story abbreviations_table_base_offset)
 
   let object_table_base story =
-    let object_table_base_offset = Word_address 10 in
+    let object_table_base_offset = Word_address 10
     Object_base (read_word story object_table_base_offset)
+
+  let routine_offset story =
+    let routine_offset_offset = Word_address 40
+    8 * (read_word story routine_offset_offset)
+
+  let string_offset story =
+    let string_offset_offset = Word_address 42
+    8 * (read_word story string_offset_offset)
 
   let load filename =
     let file = get_file filename
@@ -99,3 +107,25 @@
         let dynamic_memory = Array.take dynamic_length file
         let static_memory = Array.skip dynamic_length file
         make dynamic_memory static_memory
+
+  let decode_routine_packed_address story (Packed_routine packed) =
+    match version story with
+    | V1
+    | V2
+    | V3 -> Routine (packed * 2)
+    | V4
+    | V5 -> Routine (packed * 4)
+    | V6
+    | V7 -> Routine (packed * 4 + (routine_offset story))
+    | V8 -> Routine (packed * 8)
+
+  let decode_string_packed_address story (Packed_zstring packed) =
+    match version story with
+    | V1
+    | V2
+    | V3 -> Zstring (packed * 2)
+    | V4
+    | V5 -> Zstring (packed * 4)
+    | V6
+    | V7 -> Zstring (packed * 4 + (string_offset story))
+    | V8 -> Zstring (packed * 8)

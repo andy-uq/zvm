@@ -117,11 +117,11 @@
     instruction.text
 
   let following instruction =
-    let (Instruction addr) = instruction.address in
+    let (Instruction addr) = instruction.address
     (Instruction (addr + instruction.length))
 
   let jump_address instruction offset =
-    let (Instruction addr) = instruction.address in
+    let (Instruction addr) = instruction.address
     Instruction (addr + instruction.length + offset - 2)
   
   let continues_to_following opcode =
@@ -164,6 +164,17 @@
     | VAR_250 (* call_vn2 *)
     | VAR_236 (* call_vs2 *) -> true
     | _ -> false
+
+  let call_address instr story  =
+    if is_call (Story.version story) instr.opcode then
+      match instr.operands with
+      | (Large packed_address) :: _ ->
+        let packed_address = Packed_routine packed_address
+        let unpacked_address = Story.decode_routine_packed_address story packed_address
+        Some unpacked_address
+      | _ -> None
+    else
+      None
 
   let opcode_name opcode ver =
     match opcode with
@@ -290,14 +301,20 @@
     | EXT_28  -> "picture_table"
     | EXT_29  -> "buffer_screen"
 
-  let display instr ver =
+  let display instr story =
+    let ver = Story.version story
     let display_operands () =
-      let to_string operand =
-        match operand with
-        | Large large -> Printf.sprintf "%04x " large
-        | Small small -> Printf.sprintf "%02x " small
-        | Variable variable -> (display_variable variable) + " "
-      accumulate_strings to_string instr.operands
+      let display_remainder operands = 
+        let to_string operand =
+          match operand with
+          | Large large -> Printf.sprintf "%04x " large
+          | Small small -> Printf.sprintf "%02x " small
+          | Variable variable -> (display_variable variable) + " "
+        accumulate_strings to_string operands
+      match call_address instr story with
+      | Some (Routine addr) -> 
+        (Printf.sprintf "%04x " addr) + display_remainder (List.tail instr.operands)
+      | _ -> display_remainder instr.operands  
     let display_store () =
       match instr.store with
       | None -> ""
