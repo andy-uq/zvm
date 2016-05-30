@@ -69,3 +69,5 @@
     | EXT_16  | EXT_17  | EXT_18  | EXT_19  | EXT_20  | EXT_21  | EXT_22  | EXT_23
     | EXT_24  | EXT_25  | EXT_26  | EXT_27  | EXT_28  | EXT_29
     | ILLEGAL
+
+  type routine = Routine of int
