@@ -311,10 +311,15 @@
           | Small small -> Printf.sprintf "%02x " small
           | Variable variable -> (display_variable variable) + " "
         accumulate_strings to_string operands
-      match call_address instr story with
-      | Some (Routine addr) -> 
-        (Printf.sprintf "%04x " addr) + display_remainder (List.tail instr.operands)
-      | _ -> display_remainder instr.operands  
+      match (instr.opcode, instr.operands) with
+      | (OP1_140, [Large offset]) ->
+        let offset = signed_word offset
+        let (Instruction addr) = jump_address instr offset
+        Printf.sprintf "%04x " addr
+      | _ -> match call_address instr story with
+              | Some (Routine addr) -> 
+                (Printf.sprintf "%04x " addr) + display_remainder (List.tail instr.operands)
+              | _ -> display_remainder instr.operands  
     let display_store () =
       match instr.store with
       | None -> ""
