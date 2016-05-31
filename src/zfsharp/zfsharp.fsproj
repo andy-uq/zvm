@@ -59,6 +59,7 @@
     <Compile Include="Reachability.fs" />
     <Compile Include="Routine.fs" />
     <Compile Include="LocalStore.fs" />
+    <Compile Include="EvaluationStack.fs" />
     <Compile Include="Program.fs" />
     <None Include="App.config" />
   </ItemGroup>
