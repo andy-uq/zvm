@@ -63,6 +63,7 @@
     <Compile Include="EvaluationStack.fs" />
     <Compile Include="Frame.fs" />
     <Compile Include="Frameset.fs" />
+    <Compile Include="Interpreter.fs" />
     <Compile Include="Program.fs" />
     <None Include="App.config" />
   </ItemGroup>
