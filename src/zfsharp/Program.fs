@@ -7,6 +7,7 @@ open Utility
 [<EntryPoint>]
 let main argv = 
   let story = Story.load "minizork.z3"
-  let text = Reachability.display_reachable_instructions story (Instruction 0x37d9)
+  let locals = Local_store.create_default_locals story (Routine 0x3b36) in
+  let text = Local_store.display locals in
   Printf.printf "%s\n" text
   0 // return an integer exit code
