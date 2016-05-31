@@ -92,6 +92,10 @@
     let string_offset_offset = Word_address 42
     8 * (read_word story string_offset_offset)
 
+  let global_variables_table_base story =
+    let global_variables_table_base_offset = Word_address 12
+    Global_table_base (read_word story global_variables_table_base_offset)
+
   let load filename =
     let file = get_file filename
     let len = Array.length file

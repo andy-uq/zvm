@@ -71,3 +71,4 @@
     | ILLEGAL
 
   type routine = Routine of int
+  type global_table_base = Global_table_base of int

@@ -59,6 +59,7 @@
     <Compile Include="Reachability.fs" />
     <Compile Include="Routine.fs" />
     <Compile Include="LocalStore.fs" />
+    <Compile Include="Globals.fs" />
     <Compile Include="EvaluationStack.fs" />
     <Compile Include="Frame.fs" />
     <Compile Include="Frameset.fs" />
