@@ -60,6 +60,8 @@
     <Compile Include="Routine.fs" />
     <Compile Include="LocalStore.fs" />
     <Compile Include="EvaluationStack.fs" />
+    <Compile Include="Frame.fs" />
+    <Compile Include="Frameset.fs" />
     <Compile Include="Program.fs" />
     <None Include="App.config" />
   </ItemGroup>
