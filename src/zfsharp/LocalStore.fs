@@ -36,6 +36,18 @@
         aux new_store (i + 1)
     aux empty 1
 
+  let write_arguments local_store arguments =
+    let rec aux acc args i =
+      match args with
+      | [] -> acc
+      | arg :: tail ->
+        if i > acc.count then
+          acc
+        else
+          let new_store = write_local acc (Local i) arg
+          aux new_store tail (i + 1)
+    aux local_store arguments 1
+
   let display local_store =
     let to_string local value =
       Printf.sprintf "local%01x=%04x " (local - 1) value

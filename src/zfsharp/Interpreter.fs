@@ -62,9 +62,9 @@
       match ops with
       | [] -> (args, interp)
       | h :: t ->
-        let (argument, new_interpreter) = read_operand interp h in
-        aux ((argument :: args), new_interpreter) t in
-    let (args_rev, final_interpreter) = aux ([], interpreter) operands in
+        let (argument, new_interpreter) = read_operand interp h
+        aux ((argument :: args), new_interpreter) t
+    let (args_rev, final_interpreter) = aux ([], interpreter) operands
     ((List.rev args_rev), final_interpreter)
 
   let interpret_store interpreter store result =
@@ -72,12 +72,46 @@
     | None -> interpreter
     | Some variable -> write_variable interpreter variable result
 
+  let add_frame interpreter frame =
+    { interpreter with frames = Frameset.add_frame interpreter.frames frame }
+
+  let remove_frame interpreter =
+    { interpreter with frames = Frameset.remove_frame interpreter.frames }
+
+  let set_program_counter interpreter program_counter =
+    { interpreter with program_counter = program_counter }
+
+  let handle_call routine_address arguments interpreter instruction =
+    if routine_address = 0 then
+      let result = 0
+      let store = Instruction.store instruction
+      let store_interpreter = interpret_store interpreter store result
+      let addr = Instruction.following instruction
+      set_program_counter store_interpreter addr
+    else
+      let routine_address = Packed_routine routine_address
+      let routine_address = Story.decode_routine_packed_address interpreter.story routine_address
+      let resume_at = Instruction.following instruction
+      let store = Instruction.store instruction
+      let frame = Frame.make interpreter.story arguments routine_address resume_at store
+      let pc = Routine.first_instruction interpreter.story routine_address
+      set_program_counter (add_frame interpreter frame) pc
+
+  let step_instruction interpreter =
+    let instruction = Instruction.decode interpreter.story interpreter.program_counter in
+    let operands = Instruction.operands instruction in
+    let (arguments, interpreter) = operands_to_arguments interpreter operands in
+    let opcode = Instruction.opcode instruction in
+    match (opcode, arguments) with
+    | (VAR_224, routine :: args) -> handle_call routine args interpreter instruction
+    | _ -> failwith (Printf.sprintf "TODO: %s " (Instruction.display instruction interpreter.story))
+
   let display_current_instruction interpreter =
-    let address = interpreter.program_counter in
-    let instruction = Instruction.decode interpreter.story address in
+    let address = interpreter.program_counter
+    let instruction = Instruction.decode interpreter.story address
     Instruction.display instruction interpreter.story
 
   let display interpreter =
-    let frames = Frameset.display interpreter.frames in
-    let instr = display_current_instruction interpreter in
+    let frames = Frameset.display interpreter.frames
+    let instr = display_current_instruction interpreter
     Printf.sprintf "\n---\n%s\n%s\n" frames instr

@@ -7,7 +7,11 @@ open Utility
 [<EntryPoint>]
 let main argv = 
   let story = Story.load "minizork.z3"
-  let locals = Local_store.create_default_locals story (Routine 0x3b36) in
-  let text = Local_store.display locals in
-  Printf.printf "%s\n" text
+  let interpreter1 = Interpreter.make story
+  let interpreter2 = Interpreter.step_instruction interpreter1
+  let interpreter3 = Interpreter.step_instruction interpreter2
+  let text1 = Interpreter.display interpreter1
+  let text2 = Interpreter.display interpreter2
+  let text3 = Interpreter.display interpreter3
+  Printf.printf "%s\n%s\n%s\n" text1 text2 text3  
   0 // return an integer exit code
