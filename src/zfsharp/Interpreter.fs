@@ -52,6 +52,18 @@
     | Local_variable local -> write_local interpreter local value
     | Global_variable _global -> write_global interpreter _global value
 
+  let read_variable_in_place interpreter variable =
+    match variable with
+    | Stack -> peek_stack interpreter
+    | Local_variable local -> read_local interpreter local
+    | Global_variable _global -> read_global interpreter _global
+
+  let write_variable_in_place interpreter variable value =
+    match variable with
+    | Stack -> push_stack (pop_stack interpreter) value
+    | Local_variable local -> write_local interpreter local value
+    | Global_variable _global -> write_global interpreter _global value
+
   let read_operand interpreter operand =
     match operand with
     | Large large -> (large, interpreter)
@@ -150,7 +162,63 @@
       let pc = Routine.first_instruction interpreter.story routine_address
       set_program_counter (add_frame interpreter frame) pc
 
+  let handle_load variable interpreter =
+    let variable = Instruction.decode_variable variable
+    read_variable_in_place interpreter variable
 
+  let handle_store variable value interpreter =
+    let variable = Instruction.decode_variable variable
+    write_variable_in_place interpreter variable value
+
+  let handle_pull1 x interpreter =
+    if (Story.version interpreter.story) = V6 then
+      failwith "TODO: user stack pull not yet implemented"
+    else
+      let variable = Instruction.decode_variable x in
+      let value = peek_stack interpreter in
+      let popped_interpreter = pop_stack interpreter in
+      let store_interpreter = write_variable_in_place popped_interpreter variable value
+      (0, store_interpreter)
+
+  let handle_pull0 interpreter =
+    (* In version 6 if the operand is omitted then we simply pop the stack
+    and store the result normally. *)
+    let result = peek_stack interpreter
+    let popped_interpreter = pop_stack interpreter
+    (result, popped_interpreter)
+
+  let handle_inc variable interpreter =
+    let variable = Instruction.decode_variable variable in
+    let original = read_variable_in_place interpreter variable in
+    let incremented = original + 1 in
+    write_variable_in_place interpreter variable incremented
+
+  let handle_dec variable interpreter =
+    let variable = Instruction.decode_variable variable in
+    let original = read_variable_in_place interpreter variable in
+    let decremented = original - 1 in
+    write_variable_in_place interpreter variable decremented
+
+  let handle_inc_chk variable value interpreter =
+    let variable = Instruction.decode_variable variable in
+    let value = signed_word value in
+    let original = read_variable_in_place interpreter variable in
+    let original = signed_word original in
+    let incremented = signed_word (original + 1) in
+    let write_interpreter = write_variable_in_place interpreter variable incremented in
+    let result = if incremented > value then 1 else 0 in
+    (result, write_interpreter)
+
+  let handle_dec_chk variable value interpreter =
+    let variable = Instruction.decode_variable variable in
+    let value = signed_word value in
+    let original = read_variable_in_place interpreter variable in
+    let original = signed_word original in
+    let decremented = signed_word (original + 1) in
+    let write_interpreter = write_variable_in_place interpreter variable decremented in
+    let result = if decremented < value then 1 else 0 in
+    (result, write_interpreter)
+  
   (* Spec: 2OP:1 je a b ?(label)
      Jump if a = b. *)
   let handle_je2 a b interpreter =
@@ -239,19 +307,22 @@
     set_program_counter interpreter target
 
   let step_instruction interpreter =
-    let instruction = Instruction.decode interpreter.story interpreter.program_counter
-    let operands = Instruction.operands instruction
-    let (arguments, interpreter) = operands_to_arguments interpreter operands
-    let interpret_instruction = interpret_instruction interpreter instruction
-    let value = interpret_value_instruction interpreter instruction
-    let effect = interpret_effect_instruction interpreter instruction
-    let opcode = Instruction.opcode instruction
+    let instruction = Instruction.decode interpreter.story interpreter.program_counter in
+    let operands = Instruction.operands instruction in
+    let (arguments, interpreter) = operands_to_arguments interpreter operands in
+    let interpret_instruction = interpret_instruction interpreter instruction in
+    let value = interpret_value_instruction interpreter instruction in
+    let effect = interpret_effect_instruction interpreter instruction in
+    let opcode = Instruction.opcode instruction in
     match (opcode, arguments) with
     | (OP2_1, [a; b]) -> value (handle_je2 a b)
     | (OP2_1, [a; b; c]) -> value (handle_je3 a b c)
     | (OP2_1, [a; b; c; d]) -> value (handle_je4 a b c d)
     | (OP2_2, [a; b]) -> value (handle_jl a b)
     | (OP2_3, [a; b]) -> value (handle_jg a b)
+    | (OP2_4, [variable; value]) -> interpret_instruction (handle_dec_chk variable value)
+    | (OP2_5, [variable; value]) -> interpret_instruction (handle_inc_chk variable value)
+    | (OP2_13, [variable; value]) -> effect (handle_store variable value)
     | (OP2_15, [arr; idx]) -> value (handle_loadw arr idx)
     | (OP2_16, [arr; idx]) -> value (handle_loadb arr idx)
     | (OP2_20, [a; b]) -> value (handle_add a b)
@@ -260,11 +331,16 @@
     | (OP2_23, [a; b]) -> value (handle_div a b)
     | (OP2_24, [a; b]) -> value (handle_mod a b)
     | (OP1_128, [a]) -> value (handle_jz a)
-    | (OP1_139, [result]) -> handle_ret result interpreter
+    | (OP1_133, [variable]) -> effect (handle_inc variable)
+    | (OP1_134, [variable]) -> effect (handle_dec variable)
+    | (OP1_139, [result]) -> handle_ret result interpreter 
     | (OP1_140, [offset]) -> handle_jump offset interpreter instruction
+    | (OP1_142, [variable]) -> value (handle_load variable)
     | (VAR_224, routine :: args) -> handle_call routine args interpreter instruction
     | (VAR_225, [arr; ind; value]) -> effect (handle_storew arr ind value)
     | (VAR_226, [arr; ind; value]) -> effect (handle_storeb arr ind value)
+    | (VAR_233, []) -> interpret_instruction handle_pull0
+    | (VAR_233, [x]) -> interpret_instruction (handle_pull1 x)
     | _ -> failwith (Printf.sprintf "TODO: %s " (Instruction.display instruction interpreter.story))
 
   let display_current_instruction interpreter =
