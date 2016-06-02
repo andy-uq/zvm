@@ -27,13 +27,6 @@
     | Local_variable (Local n) -> n
     | Global_variable (Global n) -> n
 
-  (* We match Inform's convention of numbering the locals and globals from zero *)
-  let display_variable variable =
-    match variable with
-    | Stack -> "sp"
-    | Local_variable (Local local) -> Printf.sprintf "local%d" (local - 1)
-    | Global_variable (Global _global) -> Printf.sprintf "g%02x" (_global - 16)
-
   type operand_type =
     | Large_operand
     | Small_operand
@@ -300,54 +293,6 @@
     | EXT_27  -> "make_menu"
     | EXT_28  -> "picture_table"
     | EXT_29  -> "buffer_screen"
-
-  let display instr story =
-    let ver = Story.version story
-    let display_operands () =
-      let display_remainder operands = 
-        let to_string operand =
-          match operand with
-          | Large large -> Printf.sprintf "%04x " large
-          | Small small -> Printf.sprintf "%02x " small
-          | Variable variable -> (display_variable variable) + " "
-        accumulate_strings to_string operands
-      match (instr.opcode, instr.operands) with
-      | (OP1_140, [Large offset]) ->
-        let offset = signed_word offset
-        let (Instruction addr) = jump_address instr offset
-        Printf.sprintf "%04x " addr
-      | _ -> match call_address instr story with
-              | Some (Routine addr) -> 
-                (Printf.sprintf "%04x " addr) + display_remainder (List.tail instr.operands)
-              | _ -> display_remainder instr.operands  
-    let display_store () =
-      match instr.store with
-      | None -> ""
-      | Some variable -> "->" + (display_variable variable)
-    let display_branch () =
-      match instr.branch with
-      | None -> ""
-      | Some (true, Return_false) -> "?false"
-      | Some (false, Return_false) -> "?~false"
-      | Some (true, Return_true) -> "?true"
-      | Some (false, Return_true) -> "?~true"
-      | Some (true, Branch_address (Instruction address)) -> Printf.sprintf "?%04x" address
-      | Some (false, Branch_address (Instruction address)) -> Printf.sprintf "?~%04x" address
-    let display_text () =
-      match instr.text with
-      | None -> ""
-      | Some str -> str
-    let (Instruction start_addr) = instr.address
-    let name = opcode_name instr.opcode ver
-    let operands = display_operands()
-    let store = display_store()
-    let branch = display_branch()
-    let text = display_text()
-    Printf.sprintf "%04x: %s %s%s %s %s\n"
-      start_addr name operands store branch text
-    (* End of display_instruction *)
-
-
 
   (* Takes the address of an instruction and produces the instruction *)
   let decode story (Instruction address) =
@@ -643,3 +588,90 @@
       branch = branch; 
       text = text 
     }
+
+  let has_indirection instruction ver = 
+    match (instruction.opcode, ver) with
+    | (VAR_233, V6) -> false  (* pull *)
+    | (OP2_4, _)   (* dec_chk *)
+    | (OP2_5, _)   (* inc_chk *)
+    | (OP2_13, _)  (* store *)
+    | (OP1_133, _) (* inc *)
+    | (OP1_134, _) (* dec *)
+    | (OP1_142, _) (* load *)
+    | (VAR_233, _) (* pull *)
+      -> true
+    | _ -> false
+
+  (* We match Inform's convention of numbering the locals and globals from zero *)
+  let display_variable variable =
+    match variable with
+    | Stack -> "sp"
+    | Local_variable (Local local) -> Printf.sprintf "local%d" (local - 1)
+    | Global_variable (Global _global) -> Printf.sprintf "g%02x" (_global - 16)
+
+  let display_indirect_operand operand = 
+    match operand with
+    | Large large -> (display_variable (decode_variable large)) + " "
+    | Small small -> (display_variable (decode_variable small)) + " "
+    | Variable variable -> "[" + (display_variable variable) + "] " 
+
+  let display_operand operand =
+    match operand with
+    | Large large -> Printf.sprintf "%04x " large
+    | Small small -> Printf.sprintf "%02x " small
+    | Variable variable -> (display_variable variable) + " " 
+  
+  let display_jump instr =
+    match instr.operands with
+    | [Large offset] ->
+      let offset = signed_word offset
+      let (Instruction target) = jump_address instr offset
+      Printf.sprintf "%04x " target
+    | _ -> accumulate_strings display_operand instr.operands
+  
+  let display_call instr story =
+    match call_address instr story with
+      | Some (Routine addr) ->
+        let routine = (Printf.sprintf "%04x " addr) in
+        let args = accumulate_strings display_operand (List.tail instr.operands)
+        routine + args
+      | _ -> accumulate_strings display_operand instr.operands
+    
+  let display_indirect_operands operands =
+    let var = display_indirect_operand (List.head operands)
+    let rest = accumulate_strings display_operand (List.tail operands)
+    var + rest
+
+  let display instr story =
+    let ver = Story.version story
+    let display_operands () =
+      if instr.opcode = OP1_140 then display_jump instr
+      else if is_call ver instr.opcode then display_call instr story
+      else if has_indirection instr ver then display_indirect_operands instr.operands
+      else accumulate_strings display_operand instr.operands
+    let display_store () =
+      match instr.store with
+      | None -> ""
+      | Some variable -> "->" + (display_variable variable)
+    let display_branch () =
+      match instr.branch with
+      | None -> ""
+      | Some (true, Return_false) -> "?false"
+      | Some (false, Return_false) -> "?~false"
+      | Some (true, Return_true) -> "?true"
+      | Some (false, Return_true) -> "?~true"
+      | Some (true, Branch_address (Instruction address)) -> Printf.sprintf "?%04x" address
+      | Some (false, Branch_address (Instruction address)) -> Printf.sprintf "?~%04x" address
+    let display_text () =
+      match instr.text with
+      | None -> ""
+      | Some str -> str
+    let (Instruction start_addr) = instr.address
+    let name = opcode_name instr.opcode ver
+    let operands = display_operands()
+    let store = display_store()
+    let branch = display_branch()
+    let text = display_text()
+    Printf.sprintf "%04x: %s %s%s %s %s\n"
+      start_addr name operands store branch text
+    (* End of display_instruction *)
