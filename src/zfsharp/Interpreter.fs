@@ -81,6 +81,29 @@
   let set_program_counter interpreter program_counter =
     { interpreter with program_counter = program_counter }
 
+  let interpret_return interpreter value =
+    let frame = current_frame interpreter
+    let next_pc = Frame.resume_at frame
+    let store = Frame.store frame
+    let pop_frame_interpreter = remove_frame interpreter
+    let result_interpreter = set_program_counter pop_frame_interpreter next_pc
+    interpret_store result_interpreter store value
+
+  let interpret_branch interpreter instruction result =
+    let result = not (result = 0)
+    let following = Instruction.following instruction
+    match Instruction.branch instruction with
+    | None -> set_program_counter interpreter following
+    | Some (sense, Return_false) ->
+      if result = sense then interpret_return interpreter 0
+      else set_program_counter interpreter following
+    | Some (sense, Return_true) ->
+      if result = sense then interpret_return interpreter 1
+      else set_program_counter interpreter following
+    | Some (sense, Branch_address branch_target) ->
+      if result = sense then set_program_counter interpreter branch_target
+      else set_program_counter interpreter following
+
   let handle_call routine_address arguments interpreter instruction =
     if routine_address = 0 then
       let result = 0
@@ -97,12 +120,16 @@
       let pc = Routine.first_instruction interpreter.story routine_address
       set_program_counter (add_frame interpreter frame) pc
 
+  let handle_ret result interpreter =
+      interpret_return interpreter result
+
   let step_instruction interpreter =
     let instruction = Instruction.decode interpreter.story interpreter.program_counter in
     let operands = Instruction.operands instruction in
     let (arguments, interpreter) = operands_to_arguments interpreter operands in
     let opcode = Instruction.opcode instruction in
     match (opcode, arguments) with
+    | (OP1_139, [result]) -> handle_ret result interpreter
     | (VAR_224, routine :: args) -> handle_call routine args interpreter instruction
     | _ -> failwith (Printf.sprintf "TODO: %s " (Instruction.display instruction interpreter.story))
 
