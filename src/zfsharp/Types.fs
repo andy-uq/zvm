@@ -39,6 +39,10 @@
   type attribute_number = Attribute of int
   type attribute_address = Attribute_address of byte_address * bit_number
 
+  type property_number = Property of int
+  type property_address = Property_address of int
+  type property_data_address = Property_data of int
+
   type variable_location =
     | Stack
     | Local_variable of local_variable

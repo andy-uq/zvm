@@ -16,6 +16,8 @@
   *)
 
   let invalid_object = Object 0
+  let invalid_property = Property 0
+  let invalid_data = Property_data 0
 
   let default_property_table_size story =
     if Story.v3_or_lower (Story.version story) then 31 else 63
@@ -137,6 +139,118 @@
       if Story.v3_or_lower (Story.version story) then 7 else 12
     let (Object_address addr) = address story obj
     Property_header (Story.read_word story (Word_address (addr + object_property_offset)))
+
+  let default_property_table_base story =
+    let (Object_base _base) = Story.object_table_base story
+    Property_defaults_table _base
+
+  let default_property_value story (Property n) =
+    if n < 1 || n > (default_property_table_size story) then
+      failwith "invalid index into default property table"
+    else
+      let (Property_defaults_table _base) = default_property_table_base story
+      let addr = Word_address ((_base + (n - 1) * default_property_table_entry_size))
+      Story.read_word story addr
+
+  let decode_property_data story (Property_address address) = 
+    let b = Story.read_byte story (Byte_address address)
+    if b = 0 then
+      (0, 0, invalid_property)
+    else if Story.v3_or_lower (Story.version story) then
+      (1, (fetch_bits bit7 size3 b) + 1, Property (fetch_bits bit4 size5 b))
+    else
+      let prop = Property (fetch_bits bit5 size6 b)
+      if fetch_bit bit7 b then
+        let b2 = Story.read_byte story (Byte_address (address + 1))
+        let len = fetch_bits bit5 size6 b2
+        (2, (if len = 0 then 64 else len), prop)
+      else
+        (1, (if fetch_bit bit6 b then 2 else 1), prop)
+
+  let property_addresses story obj =
+    let rec aux acc address =
+      let (Property_address addr) = address
+      let b = Story.read_byte story (Byte_address addr)
+      if b = 0 then
+        acc
+      else
+        let (header_length, data_length, prop) =
+          decode_property_data story address
+        let this_property =
+          (prop, data_length, Property_data (addr + header_length))
+        let next_addr = Property_address (addr + header_length + data_length)
+        aux (this_property :: acc) next_addr
+    let (Property_header header) = property_header_address story obj
+    let property_name_address = header
+    let property_name_word_length = Story.read_byte story (Byte_address property_name_address)
+    let first_property_address =
+      Property_address (property_name_address + 1 + property_name_word_length * 2)
+    aux [] first_property_address  
+
+  let property_address story obj prop =
+    let rec aux addresses =
+      match addresses with
+      | [] -> invalid_data
+      | (number, _, address) :: tail ->
+        if number = prop then address
+        else aux tail
+    aux (property_addresses story obj)
+
+  let property_length_from_address story (Property_data address) =
+    if address = 0 then
+      0
+    else
+      let b = Story.read_byte story (Byte_address (address - 1))
+      if Story.v3_or_lower (Story.version story) then
+        1 + (fetch_bits bit7 size3 b)
+      else
+        if fetch_bit bit7 b then
+          let len = fetch_bits bit5 size6 b
+          if len = 0 then 64 else len
+        else
+          if fetch_bit bit6 b then 2 else 1
+
+  let property story obj prop =
+    let rec aux addresses =
+      match addresses with
+      | [] -> default_property_value story prop
+      | (number, length, (Property_data address)) :: tail ->
+        if number = prop then (
+          if length = 1 then
+            Story.read_byte story (Byte_address address)
+          else if length = 2 then
+            Story.read_word story (Word_address address)
+          else
+            let (Object n) = obj
+            let (Property p) = prop
+            failwith (Printf.sprintf "object %d property %d length %d bad property length" n p length))
+        else
+          aux tail
+    aux (property_addresses story obj)
+
+  let write_property story obj prop value =
+    let rec aux addresses =
+      match addresses with
+      | [] -> (invalid_data, 0)
+      | (number, length, address) :: tail ->
+        if number = prop then (address, length)
+        else aux tail
+    let (address, length) = aux (property_addresses story obj)
+    if address = invalid_data then failwith "invalid property";
+    let (Property_data address) = address
+    match length with
+    | 1 -> Story.write_byte story (Byte_address address) value
+    | 2 -> Story.write_word story (Word_address address) value
+    | _ -> failwith "property cannot be set"
+
+  let next_property story obj (Property prop) =
+    let rec aux addrs =
+      match addrs with
+      | [] -> invalid_property
+      | (Property number, _, _) :: tail ->
+        if number > prop then Property number
+        else aux tail
+    aux (property_addresses story obj)
 
   (* Oddly enough, the Z machine does not ever say how big the object table is.
      Assume that the address of the first property block in the first object is

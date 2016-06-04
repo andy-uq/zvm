@@ -418,6 +418,32 @@
 
   let handle_pop interpreter =
     pop_stack interpreter
+
+  let handle_get_next_prop obj prop interpreter =
+    let obj = Object obj in
+    let prop = Property prop in
+    let (Property next) = Object.next_property interpreter.story obj prop in
+    next  
+  
+  let handle_get_prop_addr obj prop interpreter =
+    let obj = Object obj in
+    let prop = Property prop in
+    let (Property_data addr) = Object.property_address interpreter.story obj prop in
+    addr
+
+  let handle_get_prop obj prop interpreter =
+    let obj = Object obj in
+    let prop = Property prop in
+    Object.property interpreter.story obj prop
+ 
+  let handle_get_prop_len property_address interpreter =
+    let property_address = Property_data property_address in
+    Object.property_length_from_address interpreter.story property_address
+
+  let handle_putprop obj prop value interpreter =
+    let obj = Object obj in
+    let prop = Property prop in
+    { interpreter with story = Object.write_property interpreter.story obj prop value }
   
   let handle_catch interpreter =
     failwith "TODO: catch instruction not yet implemented"
@@ -448,6 +474,9 @@
       | (OP2_14, [obj; destination]) -> effect (handle_insert_obj obj destination)
       | (OP2_15, [arr; idx]) -> value (handle_loadw arr idx)
       | (OP2_16, [arr; idx]) -> value (handle_loadb arr idx)
+      | (OP2_17, [obj; prop]) -> value (handle_get_prop obj prop)
+      | (OP2_18, [obj; prop]) -> value (handle_get_prop_addr obj prop)
+      | (OP2_19, [obj; prop]) -> value (handle_get_next_prop obj prop)
       | (OP2_20, [a; b]) -> value (handle_add a b)
       | (OP2_21, [a; b]) -> value (handle_sub a b)
       | (OP2_22, [a; b]) -> value (handle_mul a b)
@@ -457,6 +486,7 @@
       | (OP1_129, [obj]) -> value (handle_get_sibling obj)
       | (OP1_130, [obj]) -> value (handle_get_child obj)
       | (OP1_131, [obj]) -> value (handle_get_parent obj)
+      | (OP1_132, [property_address]) -> value (handle_get_prop_len property_address)
       | (OP1_133, [variable]) -> effect (handle_inc variable)
       | (OP1_134, [variable]) -> effect (handle_dec variable)
       | (OP1_135, [address]) -> effect (handle_print_addr address)
@@ -474,6 +504,7 @@
       | (VAR_224, routine :: args) -> handle_call routine args interpreter instruction
       | (VAR_225, [arr; ind; value]) -> effect (handle_storew arr ind value)
       | (VAR_226, [arr; ind; value]) -> effect (handle_storeb arr ind value)
+      | (VAR_227, [obj; prop; value]) -> effect (handle_putprop obj prop value)
       | (VAR_229, [code]) -> effect (handle_print_char code)
       | (VAR_230, [number]) -> effect (handle_print_num number)
       | (VAR_233, []) -> interpret_instruction handle_pull0
