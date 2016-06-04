@@ -80,6 +80,10 @@
     let (args_rev, final_interpreter) = aux ([], interpreter) operands
     ((List.rev args_rev), final_interpreter)
 
+  let print interpreter (text : string) =
+    System.Console.Write text;
+    interpreter
+
   let interpret_store interpreter store result =
     match store with
     | None -> interpreter
@@ -174,9 +178,9 @@
     if (Story.version interpreter.story) = V6 then
       failwith "TODO: user stack pull not yet implemented"
     else
-      let variable = Instruction.decode_variable x in
-      let value = peek_stack interpreter in
-      let popped_interpreter = pop_stack interpreter in
+      let variable = Instruction.decode_variable x
+      let value = peek_stack interpreter
+      let popped_interpreter = pop_stack interpreter
       let store_interpreter = write_variable_in_place popped_interpreter variable value
       (0, store_interpreter)
 
@@ -188,35 +192,35 @@
     (result, popped_interpreter)
 
   let handle_inc variable interpreter =
-    let variable = Instruction.decode_variable variable in
-    let original = read_variable_in_place interpreter variable in
-    let incremented = original + 1 in
+    let variable = Instruction.decode_variable variable
+    let original = read_variable_in_place interpreter variable
+    let incremented = original + 1
     write_variable_in_place interpreter variable incremented
 
   let handle_dec variable interpreter =
-    let variable = Instruction.decode_variable variable in
-    let original = read_variable_in_place interpreter variable in
-    let decremented = original - 1 in
+    let variable = Instruction.decode_variable variable
+    let original = read_variable_in_place interpreter variable
+    let decremented = original - 1
     write_variable_in_place interpreter variable decremented
 
   let handle_inc_chk variable value interpreter =
-    let variable = Instruction.decode_variable variable in
-    let value = signed_word value in
-    let original = read_variable_in_place interpreter variable in
-    let original = signed_word original in
-    let incremented = signed_word (original + 1) in
-    let write_interpreter = write_variable_in_place interpreter variable incremented in
-    let result = if incremented > value then 1 else 0 in
+    let variable = Instruction.decode_variable variable
+    let value = signed_word value
+    let original = read_variable_in_place interpreter variable
+    let original = signed_word original
+    let incremented = signed_word (original + 1)
+    let write_interpreter = write_variable_in_place interpreter variable incremented
+    let result = if incremented > value then 1 else 0
     (result, write_interpreter)
 
   let handle_dec_chk variable value interpreter =
-    let variable = Instruction.decode_variable variable in
-    let value = signed_word value in
-    let original = read_variable_in_place interpreter variable in
-    let original = signed_word original in
-    let decremented = signed_word (original + 1) in
-    let write_interpreter = write_variable_in_place interpreter variable decremented in
-    let result = if decremented < value then 1 else 0 in
+    let variable = Instruction.decode_variable variable
+    let value = signed_word value
+    let original = read_variable_in_place interpreter variable
+    let original = signed_word original
+    let decremented = signed_word (original + 1)
+    let write_interpreter = write_variable_in_place interpreter variable decremented
+    let result = if decremented < value then 1 else 0
     (result, write_interpreter)
   
   (* Spec: 2OP:1 je a b ?(label)
@@ -306,42 +310,127 @@
     let target = Instruction.jump_address instruction offset
     set_program_counter interpreter target
 
+  let handle_jin obj1 obj2 interpreter =
+    let obj1 = Object obj1
+    let obj2 = Object obj2
+    let parent = Object.parent interpreter.story obj1
+    if parent = obj2 then 1 else 0
+
+  let handle_get_sibling obj interpreter =
+    let obj = Object obj
+    let (Object sibling) = Object.sibling interpreter.story obj
+    sibling
+
+  let handle_get_child obj interpreter =
+    let obj = Object obj
+    let (Object child) = Object.child interpreter.story obj
+    child
+
+  let handle_get_parent obj interpreter =
+    let obj = Object obj
+    let (Object parent) = Object.parent interpreter.story obj
+    parent
+
+  let handle_insert_obj obj destination interpreter =
+    let obj = Object obj
+    let destination = Object destination
+    { interpreter with story = Object.insert interpreter.story obj destination}
+
+  let handle_remove_obj obj interpreter =
+    let obj = Object obj
+    { interpreter with story = Object.remove interpreter.story obj}
+
+  let handle_print_addr address interpreter =
+    let address = Zstring address
+    let text = Zstring.read interpreter.story address
+    print interpreter text
+
+  let handle_print_paddr packed_address interpreter =
+    let packed_address = Packed_zstring packed_address
+    let address = Story.decode_string_packed_address interpreter.story packed_address
+    let text = Zstring.read interpreter.story address
+    print interpreter text
+
+  let handle_print interpreter instruction =
+    let printed_interpreter = 
+      match Instruction.text instruction with
+      | Some text -> print interpreter text
+      | None -> interpreter
+    interpret_branch printed_interpreter instruction 0
+
+  let handle_print_obj obj interpreter =
+    let obj = Object obj
+    let text = Object.name interpreter.story obj
+    print interpreter text
+
+  let handle_print_ret interpreter instruction =
+    let printed_interpreter =
+      match Instruction.text instruction with
+      | Some text -> print interpreter (text + "\n")
+      | None -> interpreter 
+    interpret_return printed_interpreter 1
+
+  let handle_new_line interpreter =
+    print interpreter "\n"
+
+  let handle_print_num value interpreter =
+    let value = signed_word value
+    print interpreter (string value)
+
+  let handle_print_char (code : int) interpreter =
+    let text = string_of_char (char code)
+    print interpreter text
+
   let step_instruction interpreter =
-    let instruction = Instruction.decode interpreter.story interpreter.program_counter in
-    let operands = Instruction.operands instruction in
-    let (arguments, interpreter) = operands_to_arguments interpreter operands in
-    let interpret_instruction = interpret_instruction interpreter instruction in
-    let value = interpret_value_instruction interpreter instruction in
-    let effect = interpret_effect_instruction interpreter instruction in
-    let opcode = Instruction.opcode instruction in
+    let instruction = Instruction.decode interpreter.story interpreter.program_counter
+    let operands = Instruction.operands instruction
+    let (arguments, interpreter) = operands_to_arguments interpreter operands
+    let interpret_instruction = interpret_instruction interpreter instruction
+    let value = interpret_value_instruction interpreter instruction
+    let effect = interpret_effect_instruction interpreter instruction
+    let opcode = Instruction.opcode instruction
     match (opcode, arguments) with
-    | (OP2_1, [a; b]) -> value (handle_je2 a b)
-    | (OP2_1, [a; b; c]) -> value (handle_je3 a b c)
-    | (OP2_1, [a; b; c; d]) -> value (handle_je4 a b c d)
-    | (OP2_2, [a; b]) -> value (handle_jl a b)
-    | (OP2_3, [a; b]) -> value (handle_jg a b)
-    | (OP2_4, [variable; value]) -> interpret_instruction (handle_dec_chk variable value)
-    | (OP2_5, [variable; value]) -> interpret_instruction (handle_inc_chk variable value)
-    | (OP2_13, [variable; value]) -> effect (handle_store variable value)
-    | (OP2_15, [arr; idx]) -> value (handle_loadw arr idx)
-    | (OP2_16, [arr; idx]) -> value (handle_loadb arr idx)
-    | (OP2_20, [a; b]) -> value (handle_add a b)
-    | (OP2_21, [a; b]) -> value (handle_sub a b)
-    | (OP2_22, [a; b]) -> value (handle_mul a b)
-    | (OP2_23, [a; b]) -> value (handle_div a b)
-    | (OP2_24, [a; b]) -> value (handle_mod a b)
-    | (OP1_128, [a]) -> value (handle_jz a)
-    | (OP1_133, [variable]) -> effect (handle_inc variable)
-    | (OP1_134, [variable]) -> effect (handle_dec variable)
-    | (OP1_139, [result]) -> handle_ret result interpreter 
-    | (OP1_140, [offset]) -> handle_jump offset interpreter instruction
-    | (OP1_142, [variable]) -> value (handle_load variable)
-    | (VAR_224, routine :: args) -> handle_call routine args interpreter instruction
-    | (VAR_225, [arr; ind; value]) -> effect (handle_storew arr ind value)
-    | (VAR_226, [arr; ind; value]) -> effect (handle_storeb arr ind value)
-    | (VAR_233, []) -> interpret_instruction handle_pull0
-    | (VAR_233, [x]) -> interpret_instruction (handle_pull1 x)
-    | _ -> failwith (Printf.sprintf "TODO: %s " (Instruction.display instruction interpreter.story))
+      | (OP2_1, [a; b]) -> value (handle_je2 a b)
+      | (OP2_1, [a; b; c]) -> value (handle_je3 a b c)
+      | (OP2_1, [a; b; c; d]) -> value (handle_je4 a b c d)
+      | (OP2_2, [a; b]) -> value (handle_jl a b)
+      | (OP2_3, [a; b]) -> value (handle_jg a b)
+      | (OP2_4, [variable; value]) -> interpret_instruction (handle_dec_chk variable value)
+      | (OP2_5, [variable; value]) -> interpret_instruction (handle_inc_chk variable value)
+      | (OP2_6, [obj1; obj2]) -> value (handle_jin obj1 obj2)
+      | (OP2_13, [variable; value]) -> effect (handle_store variable value)
+      | (OP2_14, [obj; destination]) -> effect (handle_insert_obj obj destination)
+      | (OP2_15, [arr; idx]) -> value (handle_loadw arr idx)
+      | (OP2_16, [arr; idx]) -> value (handle_loadb arr idx)
+      | (OP2_20, [a; b]) -> value (handle_add a b)
+      | (OP2_21, [a; b]) -> value (handle_sub a b)
+      | (OP2_22, [a; b]) -> value (handle_mul a b)
+      | (OP2_23, [a; b]) -> value (handle_div a b)
+      | (OP2_24, [a; b]) -> value (handle_mod a b)
+      | (OP1_128, [a]) -> value (handle_jz a)
+      | (OP1_129, [obj]) -> value (handle_get_sibling obj)
+      | (OP1_130, [obj]) -> value (handle_get_child obj)
+      | (OP1_131, [obj]) -> value (handle_get_parent obj)
+      | (OP1_133, [variable]) -> effect (handle_inc variable)
+      | (OP1_134, [variable]) -> effect (handle_dec variable)
+      | (OP1_135, [address]) -> effect (handle_print_addr address)
+      | (OP1_137, [obj]) -> effect (handle_remove_obj obj)
+      | (OP1_138, [obj]) -> effect (handle_print_obj obj)
+      | (OP1_139, [result]) -> handle_ret result interpreter 
+      | (OP1_140, [offset]) -> handle_jump offset interpreter instruction
+      | (OP1_141, [paddr]) -> effect (handle_print_paddr paddr)
+      | (OP1_142, [variable]) -> value (handle_load variable)
+      | (OP0_178, []) -> handle_print interpreter instruction
+      | (OP0_179, []) -> handle_print_ret interpreter instruction
+      | (OP0_187, []) -> effect handle_new_line
+      | (VAR_224, routine :: args) -> handle_call routine args interpreter instruction
+      | (VAR_225, [arr; ind; value]) -> effect (handle_storew arr ind value)
+      | (VAR_226, [arr; ind; value]) -> effect (handle_storeb arr ind value)
+      | (VAR_229, [code]) -> effect (handle_print_char code)
+      | (VAR_230, [number]) -> effect (handle_print_num number)
+      | (VAR_233, []) -> interpret_instruction handle_pull0
+      | (VAR_233, [x]) -> interpret_instruction (handle_pull1 x)
+      | _ -> failwith (Printf.sprintf "TODO: %s " (Instruction.display instruction interpreter.story))
 
   let display_current_instruction interpreter =
     let address = interpreter.program_counter

@@ -7,7 +7,6 @@ open Utility
 [<EntryPoint>]
 let main argv = 
   let rec interpreter_loop interpreter = 
-    System.Console.Write (Interpreter.display_current_instruction interpreter);
     interpreter_loop (Interpreter.step_instruction interpreter)
   
   let story = Story.load "minizork.z3"

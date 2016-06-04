@@ -42,6 +42,13 @@
     else
       Object (Story.read_word story (Word_address (addr + 6)))
 
+  let set_parent story obj (Object new_parent) =
+    let (Object_address addr) = address story obj
+    if Story.v3_or_lower (Story.version story) then
+      Story.write_byte story (Byte_address (addr + 4)) new_parent
+    else
+      Story.write_word story (Word_address (addr + 6)) new_parent
+
   let sibling story obj =
     let (Object_address addr) = address story obj
     if Story.v3_or_lower (Story.version story) then
@@ -49,12 +56,55 @@
     else
       Object (Story.read_word story (Word_address (addr + 8)))
 
+  let set_sibling story obj (Object new_sibling) =
+    let (Object_address addr) = address story obj
+    if Story.v3_or_lower (Story.version story) then
+      Story.write_byte story (Byte_address (addr + 5)) new_sibling
+    else
+      Story.write_word story (Word_address (addr + 8)) new_sibling
+
   let child story obj =
     let (Object_address addr) = address story obj
     if Story.v3_or_lower (Story.version story) then
       Object (Story.read_byte story (Byte_address(addr + 6)))
     else
       Object (Story.read_word story (Word_address(addr + 10)))
+
+  let set_child story obj (Object new_child) =
+    let (Object_address addr) = address story obj
+    if Story.v3_or_lower (Story.version story) then
+      Story.write_byte story (Byte_address (addr + 6)) new_child
+    else
+      Story.write_word story (Word_address (addr + 10)) new_child
+
+  let find_previous_sibling story obj =
+    let rec aux current =
+      let next_sibling = sibling story current
+      if next_sibling = obj then current
+      else aux next_sibling
+    let parent = parent story obj
+    let first_child = child story parent
+    aux first_child
+
+  let remove story obj =
+    let original_parent = parent story obj
+    if original_parent = invalid_object then
+      story (* Already detatched *)
+    else
+      let edit1 = 
+        let sibling = sibling story obj
+        if obj = child story original_parent then
+          set_child story original_parent sibling
+        else
+          let prev_sibling = find_previous_sibling story obj
+          set_sibling story prev_sibling sibling
+      set_parent edit1 obj invalid_object      
+
+  let insert story new_child new_parent =
+    let edit1 = remove story new_child
+    let edit2 = set_parent edit1 new_child new_parent
+    let edit3 = set_sibling edit2 new_child (child edit2 new_parent)
+    set_child edit3 new_parent new_child
 
   (* The last two bytes in an object description are a pointer to a
   block that contains additional properties. *)
