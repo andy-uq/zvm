@@ -457,59 +457,64 @@
     let effect = interpret_effect_instruction interpreter instruction
     let opcode = Instruction.opcode instruction
     match (opcode, arguments) with
-      | (OP2_1, [a; b]) -> value (handle_je2 a b)
-      | (OP2_1, [a; b; c]) -> value (handle_je3 a b c)
-      | (OP2_1, [a; b; c; d]) -> value (handle_je4 a b c d)
-      | (OP2_2, [a; b]) -> value (handle_jl a b)
-      | (OP2_3, [a; b]) -> value (handle_jg a b)
-      | (OP2_4, [variable; value]) -> interpret_instruction (handle_dec_chk variable value)
-      | (OP2_5, [variable; value]) -> interpret_instruction (handle_inc_chk variable value)
-      | (OP2_6, [obj1; obj2]) -> value (handle_jin obj1 obj2)
-      | (OP2_8, [a; b]) -> value (handle_or a b)
-      | (OP2_9, [a; b]) -> value (handle_and a b)
-      | (OP2_10, [obj; attr]) -> value (handle_test_attr obj attr)
-      | (OP2_11, [obj; attr]) -> effect (handle_set_attr obj attr)
-      | (OP2_12, [obj; attr]) -> effect (handle_clear_attr obj attr)
-      | (OP2_13, [variable; value]) -> effect (handle_store variable value)
-      | (OP2_14, [obj; destination]) -> effect (handle_insert_obj obj destination)
-      | (OP2_15, [arr; idx]) -> value (handle_loadw arr idx)
-      | (OP2_16, [arr; idx]) -> value (handle_loadb arr idx)
-      | (OP2_17, [obj; prop]) -> value (handle_get_prop obj prop)
-      | (OP2_18, [obj; prop]) -> value (handle_get_prop_addr obj prop)
-      | (OP2_19, [obj; prop]) -> value (handle_get_next_prop obj prop)
-      | (OP2_20, [a; b]) -> value (handle_add a b)
-      | (OP2_21, [a; b]) -> value (handle_sub a b)
-      | (OP2_22, [a; b]) -> value (handle_mul a b)
-      | (OP2_23, [a; b]) -> value (handle_div a b)
-      | (OP2_24, [a; b]) -> value (handle_mod a b)
-      | (OP1_128, [a]) -> value (handle_jz a)
-      | (OP1_129, [obj]) -> value (handle_get_sibling obj)
-      | (OP1_130, [obj]) -> value (handle_get_child obj)
-      | (OP1_131, [obj]) -> value (handle_get_parent obj)
-      | (OP1_132, [property_address]) -> value (handle_get_prop_len property_address)
-      | (OP1_133, [variable]) -> effect (handle_inc variable)
-      | (OP1_134, [variable]) -> effect (handle_dec variable)
-      | (OP1_135, [address]) -> effect (handle_print_addr address)
-      | (OP1_137, [obj]) -> effect (handle_remove_obj obj)
-      | (OP1_138, [obj]) -> effect (handle_print_obj obj)
-      | (OP1_139, [result]) -> handle_ret result interpreter 
-      | (OP1_140, [offset]) -> handle_jump offset interpreter instruction
-      | (OP1_141, [paddr]) -> effect (handle_print_paddr paddr)
-      | (OP1_142, [variable]) -> value (handle_load variable)
-      | (OP0_176, []) -> handle_rtrue interpreter instruction
-      | (OP0_177, []) -> handle_rfalse interpreter instruction
-      | (OP0_178, []) -> handle_print interpreter instruction
-      | (OP0_179, []) -> handle_print_ret interpreter instruction
-      | (OP0_187, []) -> effect handle_new_line
-      | (VAR_224, routine :: args) -> handle_call routine args interpreter instruction
-      | (VAR_225, [arr; ind; value]) -> effect (handle_storew arr ind value)
-      | (VAR_226, [arr; ind; value]) -> effect (handle_storeb arr ind value)
-      | (VAR_227, [obj; prop; value]) -> effect (handle_putprop obj prop value)
-      | (VAR_229, [code]) -> effect (handle_print_char code)
-      | (VAR_230, [number]) -> effect (handle_print_num number)
-      | (VAR_233, []) -> interpret_instruction handle_pull0
-      | (VAR_233, [x]) -> interpret_instruction (handle_pull1 x)
-      | _ -> failwith (Printf.sprintf "TODO: %s " (Instruction.display instruction interpreter.story))
+    | (OP2_1, [a; b]) -> value (handle_je2 a b)
+    | (OP2_1, [a; b; c]) -> value (handle_je3 a b c)
+    | (OP2_1, [a; b; c; d]) -> value (handle_je4 a b c d)
+    | (OP2_2, [a; b]) -> value (handle_jl a b)
+    | (OP2_3, [a; b]) -> value (handle_jg a b)
+    | (OP2_4, [variable; value]) -> interpret_instruction (handle_dec_chk variable value)
+    | (OP2_5, [variable; value]) -> interpret_instruction (handle_inc_chk variable value)
+    | (OP2_6, [obj1; obj2]) -> value (handle_jin obj1 obj2)
+    | (OP2_7, [bitmap; flags]) -> value (handle_test bitmap flags)
+    | (OP2_8, [a; b]) -> value (handle_or a b)
+    | (OP2_9, [a; b]) -> value (handle_and a b)
+    | (OP2_10, [obj; attr]) -> value (handle_test_attr obj attr)
+    | (OP2_11, [obj; attr]) -> effect (handle_set_attr obj attr)
+    | (OP2_12, [obj; attr]) -> effect (handle_clear_attr obj attr)
+    | (OP2_13, [variable; value]) -> effect (handle_store variable value)
+    | (OP2_14, [obj; destination]) -> effect (handle_insert_obj obj destination)
+    | (OP2_15, [arr; idx]) -> value (handle_loadw arr idx)
+    | (OP2_16, [arr; idx]) -> value (handle_loadb arr idx)
+    | (OP2_17, [obj; prop]) -> value (handle_get_prop obj prop)
+    | (OP2_18, [obj; prop]) -> value (handle_get_prop_addr obj prop)
+    | (OP2_19, [obj; prop]) -> value (handle_get_next_prop obj prop)
+    | (OP2_20, [a; b]) -> value (handle_add a b)
+    | (OP2_21, [a; b]) -> value (handle_sub a b)
+    | (OP2_22, [a; b]) -> value (handle_mul a b)
+    | (OP2_23, [a; b]) -> value (handle_div a b)
+    | (OP2_24, [a; b]) -> value (handle_mod a b)
+    | (OP1_128, [a]) -> value (handle_jz a)
+    | (OP1_129, [obj]) -> value (handle_get_sibling obj)
+    | (OP1_130, [obj]) -> value (handle_get_child obj)
+    | (OP1_131, [obj]) -> value (handle_get_parent obj)
+    | (OP1_132, [property_address]) -> value (handle_get_prop_len property_address)
+    | (OP1_133, [variable]) -> effect (handle_inc variable)
+    | (OP1_134, [variable]) -> effect (handle_dec variable)
+    | (OP1_135, [address]) -> effect (handle_print_addr address)
+    | (OP1_137, [obj]) -> effect (handle_remove_obj obj)
+    | (OP1_138, [obj]) -> effect (handle_print_obj obj)
+    | (OP1_139, [result]) -> handle_ret result interpreter 
+    | (OP1_140, [offset]) -> handle_jump offset interpreter instruction
+    | (OP1_141, [paddr]) -> effect (handle_print_paddr paddr)
+    | (OP1_142, [variable]) -> value (handle_load variable)
+    | (OP0_176, []) -> handle_rtrue interpreter instruction
+    | (OP0_177, []) -> handle_rfalse interpreter instruction
+    | (OP0_178, []) -> handle_print interpreter instruction
+    | (OP0_179, []) -> handle_print_ret interpreter instruction
+    | (OP0_184, []) -> handle_ret_popped interpreter instruction
+    | (OP0_185, []) ->
+      if Story.v4_or_lower (Story.version interpreter.story) then effect handle_pop
+      else value handle_catch
+    | (OP0_187, []) -> effect handle_new_line
+    | (VAR_224, routine :: args) -> handle_call routine args interpreter instruction
+    | (VAR_225, [arr; ind; value]) -> effect (handle_storew arr ind value)
+    | (VAR_226, [arr; ind; value]) -> effect (handle_storeb arr ind value)
+    | (VAR_227, [obj; prop; value]) -> effect (handle_putprop obj prop value)
+    | (VAR_229, [code]) -> effect (handle_print_char code)
+    | (VAR_230, [number]) -> effect (handle_print_num number)
+    | (VAR_233, []) -> interpret_instruction handle_pull0
+    | (VAR_233, [x]) -> interpret_instruction (handle_pull1 x)
+    | _ -> failwith (Printf.sprintf "TODO: %s " (Instruction.display instruction interpreter.story))
 
   let display_current_instruction interpreter =
     let address = interpreter.program_counter
