@@ -36,6 +36,9 @@
   type packed_zstring_address = Packed_zstring of int
   type routine_address = Routine of int
   
+  type attribute_number = Attribute of int
+  type attribute_address = Attribute_address of byte_address * bit_number
+
   type variable_location =
     | Stack
     | Local_variable of local_variable

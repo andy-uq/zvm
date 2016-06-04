@@ -75,15 +75,41 @@
   let dictionary_base story =
     let dictionary_base_offset = Word_address 8
     Dictionary_base (read_word story dictionary_base_offset)
-  
+
+  let read_bit story address bit =
+    fetch_bit bit (read_byte story address)
+
+  let read_word_bit story address bit =
+    fetch_bit bit (read_word story address)
+
+  let write_set_bit story address bit =
+    let orig_byte = read_byte story address
+    let new_byte = set_bit bit orig_byte
+    write_byte story address new_byte
+
+  let write_clear_bit story address bit =
+    let orig_byte = read_byte story address
+    let new_byte = clear_bit bit orig_byte
+    write_byte story address new_byte
+
+  let write_set_bit_to story address bit value =
+    let orig_byte = read_byte story address
+    let new_byte = set_bit_to bit orig_byte value
+    write_byte story address new_byte
+
+  let write_set_word_bit_to story address bit value =
+    let orig_word = read_word story address
+    let new_word = set_bit_to bit orig_word value
+    write_word story address new_word
+
   (* Bytes 6 and 7 are the initial pc for the main routine. In version 6 (only)
   this is the (packed!) address of a routine, so the *following* byte is the first
   instruction. In all other versions the main routine is indicated just by
   its first instruction. *)
 
   let initial_program_counter story =
-    let initial_program_counter_offset = Word_address 6 in
-    let pc = read_word story initial_program_counter_offset in
+    let initial_program_counter_offset = Word_address 6
+    let pc = read_word story initial_program_counter_offset
     if (version story) = V6 then Instruction (pc * 4 + 1)
     else Instruction pc
 

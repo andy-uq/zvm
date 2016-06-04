@@ -39,6 +39,16 @@
   let fetch_bit (Bit_number n) word =
     (word &&& (1 <<< n)) >>> n = 1
 
+  let clear_bit (Bit_number n) word =
+    word &&& (~~~ (1 <<< n))
+
+  let set_bit (Bit_number n) word =
+    word ||| (1 <<< n)
+
+  let set_bit_to n word value =
+    if value then set_bit n word
+    else clear_bit n word
+
   let inc_byte_addr_by (Byte_address address) offset =
     Byte_address (address + offset)
 

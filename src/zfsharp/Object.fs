@@ -98,7 +98,31 @@
         else
           let prev_sibling = find_previous_sibling story obj
           set_sibling story prev_sibling sibling
-      set_parent edit1 obj invalid_object      
+      set_parent edit1 obj invalid_object
+
+  let attribute_count story =
+    if Story.v3_or_lower (Story.version story) then 32 else 48
+
+  let attribute_address story obj (Attribute attribute) =
+    if attribute < 0 || attribute >= (attribute_count story) then
+      failwith "bad attribute"
+    else
+      let offset = attribute / 8
+      let (Object_address obj_addr) = address story obj
+      let bit = Bit_number (7 - (attribute % 8))
+      Attribute_address ((Byte_address (obj_addr + offset)), bit)
+
+  let attribute story obj attribute =
+    let (Attribute_address (address, bit)) = attribute_address story obj attribute
+    Story.read_bit story address bit
+
+  let set_attribute story obj attribute =
+    let (Attribute_address (address, bit)) = attribute_address story obj attribute
+    Story.write_set_bit story address bit
+
+  let clear_attribute story obj attribute =
+    let (Attribute_address (address, bit)) = attribute_address story obj attribute
+    Story.write_clear_bit story address bit
 
   let insert story new_child new_parent =
     let edit1 = remove story new_child

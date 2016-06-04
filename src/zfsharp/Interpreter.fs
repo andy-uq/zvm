@@ -381,6 +381,47 @@
     let text = string_of_char (char code)
     print interpreter text
 
+  let handle_test bitmap flags interpreter =
+    if (bitmap &&& flags) = flags then 1 else 0
+
+  let handle_test_attr obj attr interpreter =
+    let obj = Object obj in
+    let attr = Attribute attr in
+    if Object.attribute interpreter.story obj attr then 1 else 0  
+
+  let handle_set_attr obj attr interpreter =
+    let obj = Object obj in
+    let attr = Attribute attr in
+    { interpreter with story = Object.set_attribute interpreter.story obj attr }
+
+  let handle_clear_attr obj attr interpreter =
+    let obj = Object obj in
+    let attr = Attribute attr in
+    { interpreter with story = Object.clear_attribute interpreter.story obj attr }
+
+  let handle_or a b interpreter =
+    a ||| b
+
+  let handle_and a b interpreter =
+    a &&& b
+
+  let handle_rtrue interpreter instruction =
+    interpret_return interpreter 1
+
+  let handle_rfalse interpreter instruction =
+    interpret_return interpreter 0
+
+  let handle_ret_popped interpreter instruction =
+    let result = peek_stack interpreter
+    let popped_interpreter = pop_stack interpreter
+    interpret_return popped_interpreter result
+
+  let handle_pop interpreter =
+    pop_stack interpreter
+  
+  let handle_catch interpreter =
+    failwith "TODO: catch instruction not yet implemented"
+
   let step_instruction interpreter =
     let instruction = Instruction.decode interpreter.story interpreter.program_counter
     let operands = Instruction.operands instruction
@@ -398,6 +439,11 @@
       | (OP2_4, [variable; value]) -> interpret_instruction (handle_dec_chk variable value)
       | (OP2_5, [variable; value]) -> interpret_instruction (handle_inc_chk variable value)
       | (OP2_6, [obj1; obj2]) -> value (handle_jin obj1 obj2)
+      | (OP2_8, [a; b]) -> value (handle_or a b)
+      | (OP2_9, [a; b]) -> value (handle_and a b)
+      | (OP2_10, [obj; attr]) -> value (handle_test_attr obj attr)
+      | (OP2_11, [obj; attr]) -> effect (handle_set_attr obj attr)
+      | (OP2_12, [obj; attr]) -> effect (handle_clear_attr obj attr)
       | (OP2_13, [variable; value]) -> effect (handle_store variable value)
       | (OP2_14, [obj; destination]) -> effect (handle_insert_obj obj destination)
       | (OP2_15, [arr; idx]) -> value (handle_loadw arr idx)
@@ -420,6 +466,8 @@
       | (OP1_140, [offset]) -> handle_jump offset interpreter instruction
       | (OP1_141, [paddr]) -> effect (handle_print_paddr paddr)
       | (OP1_142, [variable]) -> value (handle_load variable)
+      | (OP0_176, []) -> handle_rtrue interpreter instruction
+      | (OP0_177, []) -> handle_rfalse interpreter instruction
       | (OP0_178, []) -> handle_print interpreter instruction
       | (OP0_179, []) -> handle_print_ret interpreter instruction
       | (OP0_187, []) -> effect handle_new_line
